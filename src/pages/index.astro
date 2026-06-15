@@ -1,14 +1,14 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import funders from "../data/funders.json";
 
 const NVA_PROJECT_URI = "https://api.nva.unit.no/cristin/project/2769822";
 const NVA_SEARCH = `https://api.nva.unit.no/search/resources?project=${encodeURIComponent(NVA_PROJECT_URI)}&size=3&sort=publicationDate:desc`;
 
 const lang = "nb"; // change to "en" for English page
 
-// Fetch project description
+// Fetch project description and funders
 let projectDescription = "";
+let funders: { name: string; ref: string }[] = [];
 try {
   const res = await fetch(NVA_PROJECT_URI, {
     headers: {
@@ -19,8 +19,12 @@ try {
   if (res.ok) {
     const data = await res.json();
     const summary = data.popularScientificSummary ?? {};
-    // use requested language, fall back to nb, then en
     projectDescription = summary[lang] ?? summary["nb"] ?? summary["en"] ?? "";
+
+    funders = (data.funding ?? []).map((f: any) => ({
+      name: f.labels?.[lang] ?? f.labels?.["nb"] ?? f.labels?.["en"] ?? "",
+      ref: f.identifier ?? "",
+    })).filter((f: any) => f.name);
   }
 } catch (_) {}
 
