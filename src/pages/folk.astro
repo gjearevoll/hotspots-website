@@ -35,7 +35,7 @@ async function fetchOrcid(cristinId: string): Promise<string | undefined> {
     });
     if (!res.ok) return undefined;
     const data = await res.json();
-    return data.identifiers?.orcid ?? undefined;
+    return data.orcid?.id ?? data.identifiers?.orcid ?? undefined;
   } catch {
     return undefined;
   }
