@@ -1,13 +1,136 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import team from "../data/team.json";
+
+const NVA_PROJECT_URI = "https://api.nva.unit.no/cristin/project/2769822";
+const NVA_SEARCH = `https://api.nva.unit.no/search/resources?project=${encodeURIComponent(NVA_PROJECT_URI)}&size=50`;
+
+interface Person {
+  id: string;
+  cristinId: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  institution: string;
+  orcid?: string;
+}
+
+function cristinIdFromUri(uri: string): string {
+  return uri.split("/").pop() ?? "";
+}
+
+function roleLabel(role: string): string {
+  const map: Record<string, string> = {
+    ProjectManager: "Prosjektleiar",
+    ProjectParticipant: "Deltakar",
+    Creator: "Bidragsytar",
+  };
+  return map[role] ?? role;
+}
+
+async function fetchOrcid(cristinId: string): Promise<string | undefined> {
+  try {
+    const res = await fetch(`https://api.cristin.no/v2/persons/${cristinId}?format=json`, {
+      headers: { "User-Agent": "hotspots-website/1.0 (anders.finstad@ntnu.no)" },
+    });
+    if (!res.ok) return undefined;
+    const data = await res.json();
+    return data.identifiers?.orcid ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+// 1. Fetch core team from project API
+let coreTeam: Person[] = [];
+let contributors: Person[] = [];
+
+try {
+  const res = await fetch(NVA_PROJECT_URI, {
+    headers: {
+      Accept: "application/json",
+      "User-Agent": "hotspots-website/1.0 (anders.finstad@ntnu.no)",
+    },
+  });
+  if (res.ok) {
+    const data = await res.json();
+    const projectContributors = data.contributors ?? [];
+
+    // Fetch ORCID for each core team member in parallel
+    coreTeam = await Promise.all(
+      projectContributors.map(async (c: any) => {
+        const cristinId = cristinIdFromUri(c.identity?.id ?? "");
+        const orcid = cristinId ? await fetchOrcid(cristinId) : undefined;
+        const role = c.roles?.[0]?.type ?? "ProjectParticipant";
+        const affiliation = c.roles?.[0]?.affiliation?.labels?.nb
+          ?? c.roles?.[0]?.affiliation?.labels?.en
+          ?? "";
+        return {
+          id: c.identity?.id ?? "",
+          cristinId,
+          name: `${c.identity?.firstName ?? ""} ${c.identity?.lastName ?? ""}`.trim(),
+          firstName: c.identity?.firstName ?? "",
+          lastName: c.identity?.lastName ?? "",
+          role: roleLabel(role),
+          institution: affiliation,
+          orcid,
+        };
+      })
+    );
+  }
+} catch (e) {
+  console.error("Failed to fetch project team:", e);
+}
+
+// 2. Fetch contributors from publications
+const coreIds = new Set(coreTeam.map((p) => p.cristinId));
+
+try {
+  const res = await fetch(NVA_SEARCH, {
+    headers: {
+      Accept: "application/json",
+      "User-Agent": "hotspots-website/1.0 (anders.finstad@ntnu.no)",
+    },
+  });
+  if (res.ok) {
+    const data = await res.json();
+    const seen = new Set<string>();
+    const extras: Person[] = [];
+
+    for (const hit of data.hits ?? []) {
+      const pubContributors = hit.entityDescription?.contributors ?? [];
+      for (const c of pubContributors) {
+        const uri = c.identity?.id ?? "";
+        const cristinId = cristinIdFromUri(uri);
+        if (!cristinId || seen.has(cristinId) || coreIds.has(cristinId)) continue;
+        seen.add(cristinId);
+
+        const affiliation =
+          c.affiliations?.[0]?.labels?.nb ??
+          c.affiliations?.[0]?.labels?.en ??
+          c.identity?.affiliation?.labels?.nb ??
+          "";
+
+        extras.push({
+          id: uri,
+          cristinId,
+          name: c.identity?.name ?? "",
+          firstName: "",
+          lastName: "",
+          role: "Bidragsytar",
+          institution: affiliation,
+        });
+      }
+    }
+    contributors = extras;
+  }
+} catch (e) {
+  console.error("Failed to fetch publication contributors:", e);
+}
 
 function initials(name: string) {
-  return name
-    .split(" ")
-    .filter((_, i, arr) => i === 0 || i === arr.length - 1)
-    .map(n => n[0])
-    .join("");
+  const parts = name.trim().split(" ");
+  return (parts[0]?.[0] ?? "") + (parts[parts.length - 1]?.[0] ?? "");
 }
 ---
 
@@ -15,26 +138,99 @@ function initials(name: string) {
   <div class="page-header">
     <div class="page-header-inner">
       <h1>Prosjektteamet</h1>
-      <p>Forskarar og bidragsytarar frå NTNU, NINA, UiB og NMBU.</p>
+      <p>Kjerneteam og bidragsytarar frå NTNU, NINA, UiB og NMBU.</p>
     </div>
   </div>
 
   <div class="section">
+    <h2 class="section-heading">Kjerneteam</h2>
     <div class="team-grid">
-      {team.map(person => (
+      {coreTeam.map(person => (
         <div class="team-card">
           <div class="team-avatar">{initials(person.name)}</div>
           <div class="team-name">{person.name}</div>
-          <div class="team-title">{person.title}</div>
-          <div class="team-role">{person.role}</div>
-          <div class="team-institution">{person.institution}</div>
-          {person.email && (
-            <div class="team-email">
-              <a href={`mailto:${person.email}`}>{person.email}</a>
+          <div class="team-title">{person.role}</div>
+          {person.institution && <div class="team-institution">{person.institution}</div>}
+          {person.orcid && (
+            <div class="team-orcid">
+              <a
+                href={`https://orcid.org/${person.orcid}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <svg width="16" height="16" viewBox="0 0 256 256" style="vertical-align:middle;margin-right:4px;">
+                  <path d="M128 0C57.3 0 0 57.3 0 128s57.3 128 128 128 128-57.3 128-128S198.7 0 128 0z" fill="#A6CE39"/>
+                  <path d="M86.3 186.2H70.9V79.1h15.4v107.1zM108.9 79.1h41.6c39.6 0 57 28.3 57 53.6 0 27.5-21.5 53.6-56.8 53.6h-41.8V79.1zm15.4 93.3h24.5c34.9 0 42.9-26.5 42.9-39.7C191.7 111 178 93 148 93h-23.7v79.4zM88.7 56.8c0 5.5-4.5 10.1-10.1 10.1s-10.1-4.6-10.1-10.1c0-5.6 4.5-10.1 10.1-10.1s10.1 4.6 10.1 10.1z" fill="#fff"/>
+                </svg>
+                {person.orcid}
+              </a>
             </div>
           )}
         </div>
       ))}
     </div>
   </div>
+
+  {contributors.length > 0 && (
+    <div class="section-alt">
+      <div class="section">
+        <h2 class="section-heading">Bidragsytarar på publikasjonar</h2>
+        <div class="contrib-grid">
+          {contributors.map(person => (
+            <div class="contrib-item">
+              <span class="contrib-name">{person.name}</span>
+              {person.institution && (
+                <span class="contrib-inst">{person.institution}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )}
 </Layout>
+
+<style>
+.team-orcid {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+}
+.team-orcid a {
+  color: #A6CE39;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.team-orcid a:hover {
+  text-decoration: underline;
+}
+
+.contrib-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.6rem;
+}
+
+.contrib-item {
+  display: flex;
+  flex-direction: column;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--white);
+}
+
+.contrib-name {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.contrib-inst {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 0.1rem;
+  font-style: italic;
+}
+</style>
