@@ -4,51 +4,37 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Hotspot-kart</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; }
-    #map { height: 100%; width: 100%; }
-    .map-notice {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      z-index: 1000;
-      background: white;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      padding: 0.6rem 0.9rem;
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f5f5f5;
       font-family: system-ui, sans-serif;
-      font-size: 0.8rem;
-      color: #555;
-      max-width: 220px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+      color: #666;
     }
-    .map-notice strong { color: #2a6e3f; display: block; margin-bottom: 0.2rem; }
+    .placeholder {
+      text-align: center;
+    }
+    .placeholder-icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 1rem;
+      opacity: 0.3;
+    }
+    .placeholder p {
+      font-size: 0.95rem;
+    }
   </style>
 </head>
 <body>
-  <div id="map"></div>
-  <div class="map-notice">
-    <strong>Hotspot-kart (demo)</strong>
-    Interaktivt kart kjem her. Koble til WMS-teneste eller legg til GeoJSON-lag med hotspot-data.
+  <div class="placeholder">
+    <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M9 20l-5.447-2.724A1 1 0 0 1 3 16.382V5.618a1 1 0 0 1 1.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0 0 21 18.382V7.618a1 1 0 0 0-.553-.894L15 4m0 13V4m0 0L9 7"/>
+    </svg>
+    <p>Kartprodukt kjem snart</p>
   </div>
-  <script>
-    const map = L.map('map').setView([65.0, 15.0], 5);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      maxZoom: 18,
-    }).addTo(map);
-
-    // Placeholder: bounding box for Norway
-    const norwaybounds = [[57.8, 4.5], [71.2, 31.5]];
-    L.rectangle(norwaybounds, {
-      color: '#2a6e3f',
-      weight: 1,
-      fillOpacity: 0.03,
-      dashArray: '4 4'
-    }).addTo(map).bindPopup('Hotspot-data vert lagt til her');
-  </script>
 </body>
 </html>

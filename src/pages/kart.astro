@@ -1,0 +1,83 @@
+---
+import Layout from "../layouts/Layout.astro";
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+const maps = [
+  {
+    title: "Hotspots — rikdom av karplantar",
+    description:
+      "Døme på heildekkande kart over artsrikdom for karplantar i 500 × 500 m oppløysing.",
+    src: `${base}/kart/hotspots.html`,
+  },
+];
+---
+
+<Layout title="Kart" activePage="kart">
+  <div class="page-header">
+    <div class="page-header-inner">
+      <h1>Kartprodukt</h1>
+      <p>Interaktive døme på heildekkande kart over artsmangfald frå Hotspot-prosjektet.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="map-list">
+      {maps.map((m) => (
+        <div class="map-card">
+          <div class="map-card__header">
+            <h2 class="map-card__title">{m.title}</h2>
+            <p class="map-card__desc">{m.description}</p>
+          </div>
+          <iframe
+            src={m.src}
+            class="map-card__frame"
+            title={m.title}
+            loading="lazy"
+            sandbox="allow-scripts allow-same-origin"
+          ></iframe>
+        </div>
+      ))}
+    </div>
+  </div>
+</Layout>
+
+<style>
+.map-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.map-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--white);
+}
+
+.map-card__header {
+  padding: 1.25rem 1.5rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.map-card__title {
+  font-family: var(--font);
+  font-size: 1.2rem;
+  font-weight: 400;
+  color: var(--green-dark);
+  margin-bottom: 0.3rem;
+}
+
+.map-card__desc {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.map-card__frame {
+  width: 100%;
+  height: 540px;
+  border: none;
+  display: block;
+}
+</style>

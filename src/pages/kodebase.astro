@@ -1,0 +1,124 @@
+---
+import Layout from "../layouts/Layout.astro";
+
+const repos = [
+  {
+    name: "BiodiversityObservations",
+    url: "https://github.com/orgs/gjearevoll/repositories",
+    description:
+      "Samla infrastruktur for innhenting og prosessering av artsdata frå GBIF, naturhistoriske samlingar og folkeforsking.",
+  },
+  {
+    name: "freshwaterHotspots",
+    url: "https://github.com/gjearevoll/freshwaterHotspots",
+    description:
+      "Tilpassa versjon av Hotspots-rørledningen for analyse av ferskvasstartar og akvatiske habitatmodellar.",
+  },
+  {
+    name: "HotspotsDerived",
+    url: "https://github.com/gjearevoll/HotspotsDerived",
+    description:
+      "Produksjon og lagring av avleia produkt frå Hotspots-prosjektet, inkludert samanstilte kartlag og aggregerte indeksar.",
+  },
+  {
+    name: "PointedSDMs",
+    url: "https://github.com/gjearevoll/PointedSDMs",
+    description:
+      "R-pakke for integrerte artsutbreiingsmodellar (iSDM) basert på inlabru, utvikla for analyse av heterogene datakjelder.",
+  },
+];
+---
+
+<Layout title="Kodebase" activePage="kodebase">
+  <div class="page-header">
+    <div class="page-header-inner">
+      <h1>Kodebase</h1>
+      <p>Open kjeldekode frå Hotspot-prosjektet, tilgjengeleg på GitHub.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="repo-list">
+      {repos.map((repo) => (
+        <div class="repo-card">
+          <div class="repo-card__body">
+            <div class="repo-card__name">
+              <svg class="repo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+              </svg>
+              {repo.name}
+            </div>
+            <p class="repo-card__desc">{repo.description}</p>
+          </div>
+          <div class="repo-card__footer">
+            <a
+              href={repo.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn btn-primary"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+                <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+              </svg>
+              Sjå på GitHub
+            </a>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</Layout>
+
+<style>
+.repo-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.25rem;
+}
+
+.repo-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--white);
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.repo-card:hover {
+  border-color: var(--green);
+  box-shadow: 0 2px 12px rgba(42, 110, 63, 0.08);
+}
+
+.repo-card__body {
+  padding: 1.4rem 1.4rem 1rem;
+  flex: 1;
+}
+
+.repo-card__name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--green-dark);
+  margin-bottom: 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.repo-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--green);
+}
+
+.repo-card__desc {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.repo-card__footer {
+  padding: 0 1.4rem 1.4rem;
+}
+</style>

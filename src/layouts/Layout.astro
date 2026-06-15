@@ -4,7 +4,7 @@ import "../styles/global.css";
 interface Props {
   title: string;
   description?: string;
-  activePage: "om" | "folk" | "verktoy" | "publikasjonar";
+  activePage: "om" | "folk" | "kodebase" | "kart" | "publikasjonar";
 }
 
 const { title, description = "Nasjonal portal for heildekkande kart over biologisk mangfald i Noreg", activePage } = Astro.props;
@@ -14,8 +14,8 @@ const base = import.meta.env.BASE_URL;
 const navLinks = [
   { href: `${base}/`, label: "Om prosjektet", key: "om" },
   { href: `${base}/folk/`, label: "Folk", key: "folk" },
-  { href: `${base}/verktoy/`, label: "Verktøy", key: "verktoy" },
-  { href: `${base}/publikasjonar/`, label: "Publikasjonar", key: "publikasjonar" },
+  { href: `${base}/kodebase/`, label: "Kodebase", key: "kodebase" },
+  { href: `${base}/kart/`, label: "Kart", key: "kart" },
 ];
 ---
 
