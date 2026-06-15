@@ -1,8 +1,33 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import publications from "../data/publications.json";
 
-const recentPubs = publications.slice(0, 3);
+const NVA_PROJECT_URI = "https://api.nva.unit.no/cristin/project/2769822";
+const NVA_SEARCH = `https://api.nva.unit.no/search/resources?project=${encodeURIComponent(NVA_PROJECT_URI)}&size=3&sort=publicationDate:desc`;
+
+let recentPubs: { title: string; authors: string; year: string; source: string; url: string }[] = [];
+
+try {
+  const res = await fetch(NVA_SEARCH, {
+    headers: {
+      Accept: "application/json",
+      "User-Agent": "hotspots-website/1.0 (anders.finstad@ntnu.no)",
+    },
+  });
+  if (res.ok) {
+    const data = await res.json();
+    recentPubs = (data.hits ?? []).map((hit: any) => {
+      const desc = hit.entityDescription ?? {};
+      const ctx = desc.reference?.publicationContext ?? {};
+      return {
+        title: desc.mainTitle ?? hit.mainTitle ?? "Utan tittel",
+        authors: (desc.contributors ?? []).map((c: any) => c.identity?.name ?? "").filter(Boolean).join(", "),
+        year: desc.publicationDate?.year ?? "",
+        source: ctx.name ?? ctx.title ?? "Publikasjon",
+        url: hit.handle ?? "",
+      };
+    });
+  }
+} catch (_) {}
 ---
 
 <Layout title="Om prosjektet" activePage="om">

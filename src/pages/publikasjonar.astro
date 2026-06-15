@@ -1,43 +1,150 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import publications from "../data/publications.json";
+
+const NVA_PROJECT_URI = "https://api.nva.unit.no/cristin/project/2769822";
+const NVA_SEARCH = `https://api.nva.unit.no/search/resources?project=${encodeURIComponent(NVA_PROJECT_URI)}&size=50&sort=publicationDate:desc`;
+
+interface NvaContributor {
+  identity?: { name?: string };
+}
+
+interface NvaHit {
+  mainTitle?: string;
+  entityDescription?: {
+    mainTitle?: string;
+    contributors?: NvaContributor[];
+    publicationDate?: { year?: string };
+    reference?: {
+      doi?: string;
+      publicationContext?: {
+        name?: string;
+        seriesNumber?: string;
+        title?: string;
+      };
+    };
+  };
+  publicationDate?: { year?: string };
+  contributors?: NvaContributor[];
+  handle?: string;
+  identifier?: string;
+}
+
+interface Publication {
+  title: string;
+  authors: string;
+  year: string;
+  source: string;
+  url: string;
+}
+
+let publications: Publication[] = [];
+let fetchError = false;
+
+try {
+  const res = await fetch(NVA_SEARCH, {
+    headers: {
+      Accept: "application/json",
+      "User-Agent": "hotspots-website/1.0 (anders.finstad@ntnu.no)",
+    },
+  });
+
+  if (!res.ok) throw new Error(`NVA API returned ${res.status}`);
+
+  const data = await res.json();
+  const hits: NvaHit[] = data.hits ?? [];
+
+  publications = hits.map((hit) => {
+    const desc = hit.entityDescription ?? {};
+    const title = desc.mainTitle ?? hit.mainTitle ?? "Utan tittel";
+
+    const contributors: NvaContributor[] = desc.contributors ?? hit.contributors ?? [];
+    const authors = contributors
+      .map((c) => c.identity?.name ?? "")
+      .filter(Boolean)
+      .join(", ");
+
+    const year = desc.publicationDate?.year ?? hit.publicationDate?.year ?? "";
+
+    const ctx = desc.reference?.publicationContext ?? {};
+    const seriesName = ctx.name ?? ctx.title ?? "";
+    const seriesNum = ctx.seriesNumber ?? "";
+    const source = seriesName
+      ? `${seriesName}${seriesNum ? ` (${seriesNum})` : ""}`
+      : "Publikasjon";
+
+    const url = hit.handle ?? (hit.identifier ? `https://hdl.handle.net/${hit.identifier}` : "");
+
+    return { title, authors, year, source, url };
+  });
+} catch (e) {
+  fetchError = true;
+  console.error("Failed to fetch NVA publications:", e);
+}
 ---
 
 <Layout title="Publikasjonar" activePage="publikasjonar">
   <div class="page-header">
     <div class="page-header-inner">
       <h1>Publikasjonar</h1>
-      <p>Rapportar, notat og datasett frå Hotspot-prosjektet.</p>
+      <p>
+        Rapportar, notat og datasett frå Hotspot-prosjektet. Henta automatisk frå
+        <a href="https://nva.sikt.no/projects/2769822" target="_blank" rel="noopener" style="color:var(--green)">NVA</a>.
+      </p>
     </div>
   </div>
 
   <div class="section">
-    <div class="pub-list">
-      {publications.map(pub => (
-        <a
-          href={pub.url || "#"}
-          class="pub-item"
-          target={pub.url ? "_blank" : undefined}
-          rel={pub.url ? "noopener noreferrer" : undefined}
-        >
-          <div class="pub-body">
-            <div class="pub-title">{pub.title}</div>
-            <div class="pub-meta">
-              <span class="pub-year">{pub.year}</span>
-              {pub.authors} · <em>{pub.source}</em>
+    {fetchError && (
+      <div class="fetch-error">
+        Kunne ikkje hente publikasjonar frå NVA akkurat no. Prøv å laste sida på nytt.
+      </div>
+    )}
+
+    {!fetchError && publications.length === 0 && (
+      <p style="color:var(--text-muted)">Ingen publikasjonar funne.</p>
+    )}
+
+    {publications.length > 0 && (
+      <div class="pub-list">
+        {publications.map((pub) => (
+          <a
+            href={pub.url || "#"}
+            class="pub-item"
+            target={pub.url ? "_blank" : undefined}
+            rel={pub.url ? "noopener noreferrer" : undefined}
+          >
+            <div class="pub-body">
+              <div class="pub-title">{pub.title}</div>
+              <div class="pub-meta">
+                <span class="pub-year">{pub.year}</span>
+                {pub.authors && <span>{pub.authors} · </span>}
+                <em>{pub.source}</em>
+              </div>
             </div>
-          </div>
-          {pub.url && (
-            <div class="pub-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                <polyline points="15 3 21 3 21 9"/>
-                <line x1="10" y1="14" x2="21" y2="3"/>
-              </svg>
-            </div>
-          )}
-        </a>
-      ))}
-    </div>
+            {pub.url && (
+              <div class="pub-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                  <polyline points="15 3 21 3 21 9"/>
+                  <line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+              </div>
+            )}
+          </a>
+        ))}
+      </div>
+    )}
   </div>
 </Layout>
+
+<style>
+.fetch-error {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  color: #856404;
+  margin-bottom: 1.5rem;
+  font-size: 0.92rem;
+}
+</style>
