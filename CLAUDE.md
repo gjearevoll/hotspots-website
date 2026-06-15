@@ -28,5 +28,13 @@ src/data/
 - Alle API-kall brukar `FETCH_OPTS` frå `src/lib/nva.ts` (4 s timeout)
 - Publikasjonar, prosjektbeskriving og finansiering hentast automatisk ved bygg
 
+## Automatisk oppdatering
+GitHub Actions køyrer ein rebuild kvar natt kl. 03:00 UTC.
+NVA-publikasjonar vert henta ved kvar build — ingen manuell
+oppdatering nødvendig for publikasjonslista.
+
+All NVA-henting skjer i Astro-frontmatter (`---`-blokka), altså
+ved byggetid, ikkje i nettlesaren. Resultatet er statisk HTML.
+
 ## Git
 - Ingen Co-Authored-By-trailer i commits
