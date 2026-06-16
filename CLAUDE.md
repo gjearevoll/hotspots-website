@@ -60,6 +60,12 @@ ved byggetid, ikkje i nettlesaren. Resultatet er statisk HTML.
 GitHub Actions køyrer ein rebuild kvar natt kl. 03:00 UTC.
 NVA-data vert henta ved kvar build — ingen manuell oppdatering nødvendig.
 
+## Focus box (bruksområde)
+Focus box-innhald (bruksområde og avgrensningar) ligg i
+`src/config/project.yaml` under nøkkelen `focus_box`.
+Oppdater alltid begge språkversjonane (`no` og `en`) samtidig.
+Ikonnamn er Tabler Icons-klassar (`ti-trees`, `ti-shield-check`, osb.).
+
 ## Legge til innhald
 - **Publikasjonar**: automatisk frå NVA
 - **Teammedlemmar**: edit `src/config/project.yaml` (kjerneteam hentast òg frå NVA)

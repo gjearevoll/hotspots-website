@@ -6,6 +6,12 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import yaml from "js-yaml";
 
+export interface FocusBoxUse {
+  icon: string;
+  title: { no: string; en: string };
+  description: { no: string; en: string };
+}
+
 export interface ProjectConfig {
   project: {
     name: { no: string; en: string };
@@ -18,6 +24,14 @@ export interface ProjectConfig {
   };
   nva: {
     cristin_project_id: string;
+  };
+  focus_box?: {
+    heading: { no: string; en: string };
+    uses: FocusBoxUse[];
+    caveats: {
+      heading: { no: string; en: string };
+      items: { no: string; en: string }[];
+    };
   };
 }
 

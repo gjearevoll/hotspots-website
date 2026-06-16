@@ -17,3 +17,48 @@ project:
 
 nva:
   cristin_project_id: "2769822"
+
+focus_box:
+  heading:
+    no: "Slik kan du bruke karta"
+    en: "How to use the maps"
+  uses:
+    - icon: ti-trees
+      title:
+        no: "Naturbudsjett"
+        en: "Nature budget"
+      description:
+        no: "Identifiser høgverdiområde før utbygging og infrastruktur."
+        en: "Identify high-value areas before development and infrastructure projects."
+    - icon: ti-shield-check
+      title:
+        no: "Verneprioritering"
+        en: "Conservation prioritisation"
+      description:
+        no: "Finn område der vern gir størst effekt for flest artar."
+        en: "Find areas where protection yields the greatest benefit for most species."
+    - icon: ti-search
+      title:
+        no: "Kartleggingsprioritet"
+        en: "Survey prioritisation"
+      description:
+        no: "Sjå kvar kunnskapshola er størst og ny innsats monnar mest."
+        en: "See where knowledge gaps are largest and new survey effort matters most."
+    - icon: ti-file-analytics
+      title:
+        no: "Konsekvensvurdering"
+        en: "Impact assessment"
+      description:
+        no: "Underlag for vurdering av naturpåverknad i reguleringsplanar."
+        en: "Evidence base for assessing nature impacts in spatial planning."
+  caveats:
+    heading:
+      no: "Viktig å vite"
+      en: "Important to know"
+    items:
+      - no: "Alle kart har tilhøyrande usikkerheitskart — bruk desse alltid saman med hovudkarta."
+        en: "All maps have accompanying uncertainty maps — always use these together with the main maps."
+      - no: "Modellusikkerheita varierer mykje mellom artar og artsgrupper — sjeldne artar med få observasjonar har gjennomgåande lågare presisjon."
+        en: "Model uncertainty varies considerably between species and species groups — rare species with few observations have generally lower precision."
+      - no: "Karta viser potensiell førekomst, ikkje habitatkvalitet. Mange artar krev større og meir samanhengande leveområde enn det ei enkelt rute representerer."
+        en: "Maps show potential occurrence, not habitat quality. Many species require larger and more continuous habitat than a single grid cell represents."

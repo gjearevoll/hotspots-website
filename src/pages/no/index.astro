@@ -2,6 +2,7 @@
 import Layout from "../../layouts/Layout.astro";
 import HeroCarousel from "../../components/HeroCarousel.astro";
 import PublicationList from "../../components/PublicationList.astro";
+import FocusBox from "../../components/FocusBox.astro";
 import { config } from "../../lib/config.ts";
 import { fetchPublications, fetchProjectMeta } from "../../lib/nva.ts";
 
@@ -84,6 +85,10 @@ const recentPubs = await fetchPublications(cristin_project_id, { size: 3 });
         </div>
       </div>
     </div>
+  </div>
+
+  <div class="section">
+    <FocusBox lang="no" />
   </div>
 
   <div class="section-alt">

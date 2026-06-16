@@ -1,0 +1,128 @@
+---
+import { config } from "../lib/config.ts";
+
+interface Props {
+  lang: "no" | "en";
+}
+
+const { lang } = Astro.props;
+const fb = config.focus_box;
+if (!fb) return;
+---
+
+<div class="focus-box">
+  <p class="fb-heading">{fb.heading[lang]}</p>
+
+  <div class="uses-grid">
+    {fb.uses.map(use => (
+      <div class="use-card">
+        <i class={`ti ${use.icon} use-icon`} aria-hidden="true"></i>
+        <div class="use-title">{use.title[lang]}</div>
+        <div class="use-desc">{use.description[lang]}</div>
+      </div>
+    ))}
+  </div>
+
+  <hr class="fb-divider" />
+
+  <p class="fb-heading">{fb.caveats.heading[lang]}</p>
+  <ul class="caveat-list">
+    {fb.caveats.items.map(item => (
+      <li class="caveat-item">
+        <i class="ti ti-info-circle caveat-icon" aria-hidden="true"></i>
+        <span>{item[lang]}</span>
+      </li>
+    ))}
+  </ul>
+</div>
+
+<style>
+.focus-box {
+  background: var(--white);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  padding: 1.5rem;
+}
+
+.fb-heading {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--green);
+  margin-bottom: 0.9rem;
+}
+
+/* ── Use cards ── */
+.uses-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+
+.use-card {
+  background: #f4f9f6;
+  border-radius: 6px;
+  padding: 0.875rem;
+}
+
+.use-icon {
+  font-size: 20px;
+  color: var(--green);
+  display: block;
+  margin-bottom: 0.45rem;
+  line-height: 1;
+}
+
+.use-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--green-dark);
+  margin-bottom: 0.2rem;
+  line-height: 1.3;
+}
+
+.use-desc {
+  font-size: 12px;
+  color: var(--green);
+  line-height: 1.45;
+}
+
+/* ── Divider ── */
+.fb-divider {
+  border: none;
+  border-top: 0.5px solid var(--border);
+  margin: 0 0 1rem;
+}
+
+/* ── Caveats ── */
+.caveat-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.caveat-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.caveat-icon {
+  font-size: 14px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+@media (max-width: 480px) {
+  .uses-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
