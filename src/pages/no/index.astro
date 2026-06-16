@@ -46,33 +46,9 @@ const recentPubs = await fetchPublications(cristin_project_id, { size: 3 });
       </div>
 
       <div>
-        <div class="card card-green">
-          <h3>Modellkvalitet og omfang</h3>
-          <div class="stat-grid">
-            <div class="stat-item">
-              <div class="stat-item-num">7 700+</div>
-              <div class="stat-item-label">modelerte artar</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-item-num">35 mill.</div>
-              <div class="stat-item-label">observasjonspostar</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-item-num">500 m</div>
-              <div class="stat-item-label">romleg oppløysing</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-item-num">88 000+</div>
-              <div class="stat-item-label">bidragsytarar</div>
-            </div>
-          </div>
-          <p style="font-size:0.82rem; color:var(--text-muted); margin-top:0.75rem;">
-            Hotspot-klassar: HS1 (topp 1 %), HS2 (topp 5 %), HS3 (topp 10 % artsrikaste område).
-            Alle kart publiserast med tilhøyrande usikkerheitskart.
-          </p>
-        </div>
+        <FocusBox lang="no" />
 
-        <div class="card card-white">
+        <div class="card card-white" style="margin-top: 1rem;">
           <h3>Finansiert av</h3>
           <div class="funder-list">
             {funders.map(f => (
@@ -85,10 +61,6 @@ const recentPubs = await fetchPublications(cristin_project_id, { size: 3 });
         </div>
       </div>
     </div>
-  </div>
-
-  <div class="section">
-    <FocusBox lang="no" />
   </div>
 
   <div class="section-alt">

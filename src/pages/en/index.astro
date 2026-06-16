@@ -46,33 +46,9 @@ const recentPubs = await fetchPublications(cristin_project_id, { size: 3 });
       </div>
 
       <div>
-        <div class="card card-green">
-          <h3>Model quality and scope</h3>
-          <div class="stat-grid">
-            <div class="stat-item">
-              <div class="stat-item-num">7 700+</div>
-              <div class="stat-item-label">modelled species</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-item-num">35 mill.</div>
-              <div class="stat-item-label">observation records</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-item-num">500 m</div>
-              <div class="stat-item-label">spatial resolution</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-item-num">88 000+</div>
-              <div class="stat-item-label">contributors</div>
-            </div>
-          </div>
-          <p style="font-size:0.82rem; color:var(--text-muted); margin-top:0.75rem;">
-            Hotspot classes: HS1 (top 1%), HS2 (top 5%), HS3 (top 10% most species-rich areas).
-            All maps are published with accompanying uncertainty maps.
-          </p>
-        </div>
+        <FocusBox lang="en" />
 
-        <div class="card card-white">
+        <div class="card card-white" style="margin-top: 1rem;">
           <h3>Funded by</h3>
           <div class="funder-list">
             {funders.map(f => (
@@ -85,10 +61,6 @@ const recentPubs = await fetchPublications(cristin_project_id, { size: 3 });
         </div>
       </div>
     </div>
-  </div>
-
-  <div class="section">
-    <FocusBox lang="en" />
   </div>
 
   <div class="section-alt">
