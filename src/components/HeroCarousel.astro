@@ -168,6 +168,23 @@ const images = allImages.filter((img) =>
 .hero-dot:hover {
   background: rgba(255, 255, 255, 0.6);
 }
+
+@media (max-width: 640px) {
+  .hero-slide__attribution {
+    bottom: 0;
+    right: 0;
+    left: 0;
+    max-width: 100%;
+    border-radius: 0;
+    text-align: left;
+    font-size: 0.65rem;
+    padding: 0.2rem 0.6rem;
+  }
+
+  .hero-dots {
+    bottom: 1.6rem;
+  }
+}
 </style>
 
 <script>
