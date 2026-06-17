@@ -74,4 +74,6 @@ Ikonnamn er Tabler Icons-klassar (`ti-trees`, `ti-shield-check`, osb.).
 - **Repositorium**: edit `src/data/repositories.yaml`
 
 ## Git
+- Remote: https://github.com/gjearevoll/hotspots-website.git
+- Live site: https://gjearevoll.github.io/hotspots-website/
 - Ingen Co-Authored-By-trailer i commits
