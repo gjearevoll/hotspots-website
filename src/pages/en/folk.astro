@@ -6,17 +6,11 @@ import { fetchCoreTeam, fetchPublicationContributors } from "../../lib/nva.ts";
 
 const { cristin_project_id } = config.nva;
 
-const ROLE_LABELS: Record<string, string> = {
-  ProjectManager: "Project Manager",
-  ProjectParticipant: "Participant",
-  Creator: "Contributor",
-};
-
 const rawTeam = await fetchCoreTeam(cristin_project_id);
 const coreTeam = rawTeam.map(p => ({
   name: p.name,
-  roleLabel: ROLE_LABELS[p.roleType] ?? p.roleType,
-  institution: p.institution,
+  institution: p.institution.en,
+  topInstitution: p.topInstitution.en,
   orcid: p.orcid,
 }));
 

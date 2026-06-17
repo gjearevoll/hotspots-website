@@ -59,7 +59,10 @@ export interface CorePerson {
   name: string;
   /** Raw NVA role type, e.g. "ProjectManager" | "ProjectParticipant" */
   roleType: string;
-  institution: string;
+  /** Department / institute level, bilingual */
+  institution: { nb: string; en: string };
+  /** Top-level parent institution (e.g. NTNU, NINA), bilingual */
+  topInstitution: { nb: string; en: string };
   orcid?: string;
 }
 
@@ -172,6 +175,8 @@ export async function fetchProjectMeta(
 /**
  * Fetch the core project team from the NVA project API.
  * Looks up each person's ORCID via the Cristin API in parallel.
+ * Also resolves each person's top-level institution (e.g. NTNU, NINA)
+ * from the NVA organisation API using the affiliation ID.
  * Returns an empty array on error.
  */
 export async function fetchCoreTeam(
@@ -184,18 +189,61 @@ export async function fetchCoreTeam(
       return [];
     }
     const data = await res.json();
+    const contributors: any[] = data.contributors ?? [];
+
+    // Collect unique top-level org codes (e.g. "194.0.0.0" for NTNU)
+    const topCodes = new Set<string>();
+    for (const c of contributors) {
+      const affiliationId: string = c.roles?.[0]?.affiliation?.id ?? "";
+      const orgCode = affiliationId.split("/").pop() ?? "";
+      const topSegment = orgCode.split(".")[0];
+      if (topSegment) topCodes.add(`${topSegment}.0.0.0`);
+    }
+
+    // Fetch all unique top-level org labels in parallel
+    const topOrgLabels = new Map<string, { nb: string; en: string }>();
+    await Promise.all(
+      Array.from(topCodes).map(async (code) => {
+        try {
+          const r = await fetch(
+            `https://api.nva.unit.no/cristin/organization/${code}`,
+            makeFetchOpts()
+          );
+          if (!r.ok) return;
+          const org = await r.json();
+          topOrgLabels.set(code, {
+            nb: org.labels?.nb ?? org.labels?.en ?? code,
+            en: org.labels?.en ?? org.labels?.nb ?? code,
+          });
+        } catch {
+          // leave entry missing — topInstitution will be empty string
+        }
+      })
+    );
+
     return Promise.all(
-      (data.contributors ?? []).map(async (c: any) => {
+      contributors.map(async (c: any) => {
         const cristinId = cristinIdFromUri(c.identity?.id ?? "");
         const orcid = cristinId ? await fetchOrcid(cristinId) : undefined;
+
+        const affiliationId: string = c.roles?.[0]?.affiliation?.id ?? "";
+        const orgCode = affiliationId.split("/").pop() ?? "";
+        const topSegment = orgCode.split(".")[0];
+        const topCode = topSegment ? `${topSegment}.0.0.0` : "";
+        const topOrg = topCode ? topOrgLabels.get(topCode) : undefined;
+
         return {
           cristinId,
           name: `${c.identity?.firstName ?? ""} ${c.identity?.lastName ?? ""}`.trim(),
           roleType: c.roles?.[0]?.type ?? "ProjectParticipant",
-          institution:
-            c.roles?.[0]?.affiliation?.labels?.nb ??
-            c.roles?.[0]?.affiliation?.labels?.en ??
-            "",
+          institution: {
+            nb: c.roles?.[0]?.affiliation?.labels?.nb ?? c.roles?.[0]?.affiliation?.labels?.en ?? "",
+            en: c.roles?.[0]?.affiliation?.labels?.en ?? c.roles?.[0]?.affiliation?.labels?.nb ?? "",
+          },
+          topInstitution: {
+            nb: topOrg?.nb ?? "",
+            en: topOrg?.en ?? "",
+          },
           orcid,
         } satisfies CorePerson;
       })

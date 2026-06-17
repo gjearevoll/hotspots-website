@@ -1,8 +1,8 @@
 ---
 interface TeamMember {
   name: string;
-  roleLabel: string;
   institution: string;
+  topInstitution: string;
   orcid?: string;
 }
 
@@ -33,8 +33,8 @@ function initials(name: string): string {
       <div class="team-card">
         <div class="team-avatar">{initials(person.name)}</div>
         <div class="team-name">{person.name}</div>
-        <div class="team-title">{person.roleLabel}</div>
         {person.institution && <div class="team-institution">{person.institution}</div>}
+        {person.topInstitution && <div class="team-top-inst">{person.topInstitution}</div>}
         {person.orcid && (
           <div class="team-orcid">
             <a href={`https://orcid.org/${person.orcid}`} target="_blank" rel="noopener noreferrer">
@@ -68,6 +68,7 @@ function initials(name: string): string {
 )}
 
 <style>
+.team-top-inst { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.1rem; }
 .team-orcid { margin-top: 0.5rem; font-size: 0.8rem; }
 .team-orcid a { color: #A6CE39; text-decoration: none; display: flex; align-items: center; gap: 0.25rem; }
 .team-orcid a:hover { text-decoration: underline; }
