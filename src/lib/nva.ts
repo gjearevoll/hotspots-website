@@ -69,7 +69,10 @@ export interface CorePerson {
 export interface PubContributor {
   cristinId: string;
   name: string;
-  institution: string;
+  /** Department / institute level, bilingual */
+  institution: { nb: string; en: string };
+  /** Top-level parent institution, bilingual */
+  topInstitution: { nb: string; en: string };
 }
 
 export interface ProjectMeta {
@@ -256,6 +259,7 @@ export async function fetchCoreTeam(
 
 /**
  * Fetch unique contributors from publications, excluding IDs in `excludeIds`.
+ * Resolves the top-level parent institution for each contributor in parallel.
  * Useful for finding co-authors beyond the registered project team.
  * Returns an empty array on error.
  */
@@ -274,24 +278,73 @@ export async function fetchPublicationContributors(
     }
     const data = await res.json();
     const seen = new Set<string>();
-    const result: PubContributor[] = [];
+
+    // First pass: collect raw contributor data
+    type RawContrib = {
+      cristinId: string;
+      name: string;
+      institution: { nb: string; en: string };
+      topCode: string;
+    };
+    const raw: RawContrib[] = [];
 
     for (const hit of data.hits ?? []) {
       for (const c of hit.entityDescription?.contributors ?? []) {
         const cristinId = cristinIdFromUri(c.identity?.id ?? "");
         if (!cristinId || seen.has(cristinId) || excludeIds.has(cristinId)) continue;
         seen.add(cristinId);
-        result.push({
+
+        const affiliationId: string = c.affiliations?.[0]?.id ?? "";
+        const orgCode = affiliationId.split("/").pop() ?? "";
+        const topSegment = orgCode.split(".")[0];
+        const topCode = topSegment ? `${topSegment}.0.0.0` : "";
+
+        raw.push({
           cristinId,
           name: c.identity?.name ?? "",
-          institution:
-            c.affiliations?.[0]?.labels?.nb ??
-            c.affiliations?.[0]?.labels?.en ??
-            "",
+          institution: {
+            nb: c.affiliations?.[0]?.labels?.nb ?? c.affiliations?.[0]?.labels?.en ?? "",
+            en: c.affiliations?.[0]?.labels?.en ?? c.affiliations?.[0]?.labels?.nb ?? "",
+          },
+          topCode,
         });
       }
     }
-    return result;
+
+    // Fetch unique top-level org labels in parallel
+    const topCodes = new Set(raw.map(r => r.topCode).filter(Boolean));
+    const topOrgLabels = new Map<string, { nb: string; en: string }>();
+    await Promise.all(
+      Array.from(topCodes).map(async (code) => {
+        try {
+          const r = await fetch(
+            `https://api.nva.unit.no/cristin/organization/${code}`,
+            makeFetchOpts()
+          );
+          if (!r.ok) return;
+          const org = await r.json();
+          topOrgLabels.set(code, {
+            nb: org.labels?.nb ?? org.labels?.en ?? code,
+            en: org.labels?.en ?? org.labels?.nb ?? code,
+          });
+        } catch {
+          // leave entry missing — topInstitution will be empty string
+        }
+      })
+    );
+
+    return raw.map(({ cristinId, name, institution, topCode }) => {
+      const topOrg = topCode ? topOrgLabels.get(topCode) : undefined;
+      return {
+        cristinId,
+        name,
+        institution,
+        topInstitution: {
+          nb: topOrg?.nb ?? "",
+          en: topOrg?.en ?? "",
+        },
+      };
+    });
   } catch (e) {
     console.warn("[nva] Publication contributors fetch failed:", e);
     return [];

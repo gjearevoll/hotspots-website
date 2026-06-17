@@ -15,7 +15,12 @@ const coreTeam = rawTeam.map(p => ({
 }));
 
 const coreIds = new Set(rawTeam.map(p => p.cristinId));
-const contributors = await fetchPublicationContributors(cristin_project_id, coreIds);
+const rawContributors = await fetchPublicationContributors(cristin_project_id, coreIds);
+const contributors = rawContributors.map(p => ({
+  name: p.name,
+  institution: p.institution.nb,
+  topInstitution: p.topInstitution.nb,
+}));
 ---
 
 <Layout title="Folk" activePage="folk" lang="no">

@@ -9,6 +9,7 @@ interface TeamMember {
 interface Contributor {
   name: string;
   institution: string;
+  topInstitution: string;
 }
 
 interface Props {
@@ -60,6 +61,7 @@ function initials(name: string): string {
           <div class="contrib-item">
             <span class="contrib-name">{person.name}</span>
             {person.institution && <span class="contrib-inst">{person.institution}</span>}
+            {person.topInstitution && <span class="contrib-top-inst">{person.topInstitution}</span>}
           </div>
         ))}
       </div>
@@ -76,4 +78,5 @@ function initials(name: string): string {
 .contrib-item { display: flex; flex-direction: column; padding: 0.65rem 0.9rem; border: 1px solid var(--border); border-radius: 6px; background: var(--white); }
 .contrib-name { font-size: 0.92rem; font-weight: 600; color: var(--text); }
 .contrib-inst { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.1rem; font-style: italic; }
+.contrib-top-inst { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.1rem; }
 </style>
