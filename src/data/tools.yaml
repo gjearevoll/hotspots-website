@@ -1,8 +1,0 @@
-- id: hotspots-map
-  title:
-    no: "Hotspots — rikdom av karplantar"
-    en: "Hotspots — richness of vascular plants"
-  description:
-    no: "Døme på heildekkande kart over artsrikdom for karplantar i 500 × 500 m oppløysing."
-    en: "Example of a comprehensive map of species richness for vascular plants at 500 × 500 m resolution."
-  iframe_src: /kart/hotspots.html

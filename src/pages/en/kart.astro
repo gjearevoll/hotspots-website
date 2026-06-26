@@ -1,45 +1,452 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import ToolCard from "../../components/ToolCard.astro";
-import { readFileSync } from "fs";
-import { join } from "path";
-import yaml from "js-yaml";
-
-interface ToolEntry {
-  id: string;
-  title: { no: string; en: string };
-  description: { no: string; en: string };
-  iframe_src: string;
-}
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-const tools = yaml.load(
-  readFileSync(join(process.cwd(), "src/data/tools.yaml"), "utf-8")
-) as ToolEntry[];
+const strings = {
+  banner:
+    "⚠️ This is a prototype. The map data shown is synthetic test data and does not represent real results from the Hotspot project.",
+  intro:
+    "Explore biodiversity maps from the Hotspot project. Select a layer to display it on the map. Maps are available as Cloud Optimized GeoTIFF and can be downloaded individually or used directly in GIS software.",
+  panelHeading: "Layers",
+  activeHeading: "Active layer",
+  downloadLabel: "Download",
+  error: "Could not load the map layer.",
+  labels: {
+    species_richness_norway_demo: "Species richness",
+    hotspot_index_norway_demo: "Hotspot index",
+    sampling_effort_norway_demo: "Sampling effort",
+  },
+};
 ---
 
 <Layout title="Explore" activePage="kart" lang="en">
   <div class="page-header">
     <div class="page-header-inner">
       <h1>Explore</h1>
-      <p>Interactive examples of comprehensive biodiversity maps from the Hotspots projects.</p>
+      <p>Interactive maps of biodiversity in Norway.</p>
     </div>
   </div>
 
   <div class="section">
-    <div class="map-list">
-      {tools.map(tool => (
-        <ToolCard
-          title={tool.title.en}
-          description={tool.description.en}
-          iframeSrc={`${base}${tool.iframe_src}`}
-        />
-      ))}
+    <div class="prototype-banner" role="note">{strings.banner}</div>
+    <p class="explorer-intro">{strings.intro}</p>
+
+    <div class="explorer">
+      <aside class="layer-panel">
+        <h2 class="panel-heading">{strings.panelHeading}</h2>
+        <ul id="layer-list" class="layer-list" aria-label={strings.panelHeading}></ul>
+
+        <div id="active-info" class="active-info" hidden>
+          <div class="active-heading">{strings.activeHeading}</div>
+          <div id="active-title" class="active-title"></div>
+          <div id="legend" class="legend" hidden>
+            <div id="legend-bar" class="legend-bar"></div>
+            <div class="legend-range">
+              <span id="legend-min"></span>
+              <span id="legend-max"></span>
+            </div>
+          </div>
+          <a id="download-link" class="download-btn" download>
+            <span class="dl-icon" aria-hidden="true">📥</span>
+            <span class="dl-text">
+              <span class="dl-action">{strings.downloadLabel}</span>
+              <span id="download-name" class="dl-name"></span>
+              <span id="download-size" class="dl-size"></span>
+            </span>
+          </a>
+        </div>
+      </aside>
+
+      <div class="map-wrap">
+        <div id="map" class="map"></div>
+        <div id="map-loader" class="map-loader" hidden><div class="spinner"></div></div>
+        <div id="map-error" class="map-error" hidden></div>
+      </div>
     </div>
   </div>
+
+  <link
+    is:inline
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script is:inline src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script is:inline src="https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.js"></script>
+  <script is:inline src="https://unpkg.com/georaster-layer-for-leaflet@3.10.0/dist/georaster-layer-for-leaflet.min.js"></script>
+
+  <script is:inline define:vars={{ base, strings }}>
+    (function () {
+      const NORWAY_BOUNDS = [[57.5, 4.0], [71.5, 31.5]]; // [[S,W],[N,E]]
+      const $ = (id) => document.getElementById(id);
+
+      function fmtBytes(b) {
+        if (!b && b !== 0) return "";
+        if (b < 1024) return b + " B";
+        if (b < 1024 * 1024) return (b / 1024).toFixed(1) + " KB";
+        return (b / (1024 * 1024)).toFixed(1) + " MB";
+      }
+
+      // Colour ramps -----------------------------------------------------
+      function lerp(a, b, t) { return Math.round(a + (b - a) * t); }
+      function clamp01(t) { return t < 0 ? 0 : t > 1 ? 1 : t; }
+
+      function rampFor(id) {
+        if (id.indexOf("sampling_effort") !== -1) {
+          // white -> blue
+          return {
+            css: "linear-gradient(to right,#ffffff,#1e5aa8)",
+            fn: (t) => `rgb(${lerp(255,30,t)},${lerp(255,90,t)},${lerp(255,168,t)})`,
+          };
+        }
+        // green -> yellow -> red (viridis-like warm)
+        return {
+          css: "linear-gradient(to right,#2a6e3f,#ffd23f,#d02f30)",
+          fn: (t) => {
+            if (t < 0.5) {
+              const u = t / 0.5;
+              return `rgb(${lerp(42,255,u)},${lerp(110,210,u)},${lerp(63,63,u)})`;
+            }
+            const u = (t - 0.5) / 0.5;
+            return `rgb(${lerp(255,208,u)},${lerp(210,47,u)},${lerp(63,48,u)})`;
+          },
+        };
+      }
+
+      // Map --------------------------------------------------------------
+      const map = L.map("map", { minZoom: 3, maxZoom: 12 }).fitBounds(NORWAY_BOUNDS);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap",
+        maxZoom: 19,
+      }).addTo(map);
+
+      let currentLayer = null;
+
+      function showLoader(on) { $("map-loader").hidden = !on; }
+      function showError(msg) {
+        const el = $("map-error");
+        el.textContent = msg;
+        el.hidden = !msg;
+      }
+
+      async function loadItem(item, liEl) {
+        document.querySelectorAll(".layer-item").forEach((e) => {
+          e.classList.remove("active");
+          e.setAttribute("aria-pressed", "false");
+        });
+        if (liEl) {
+          liEl.classList.add("active");
+          liEl.setAttribute("aria-pressed", "true");
+        }
+        showError("");
+        showLoader(true);
+        try {
+          const asset = item.assets.data;
+          const url = new URL(asset.href, item._self).href;
+
+          const resp = await fetch(url);
+          if (!resp.ok) throw new Error("HTTP " + resp.status);
+          const buf = await resp.arrayBuffer();
+          const sizeBytes = buf.byteLength;
+
+          // Read the COG fully into memory on the main thread (no web worker)
+          // so the map layer renders from memory and never re-fetches the file.
+          const tiff = await GeoTIFF.fromArrayBuffer(buf);
+          const image = await tiff.getImage();
+          const width = image.getWidth();
+          const height = image.getHeight();
+          const [xmin, ymin, xmax, ymax] = image.getBoundingBox();
+          let noData = image.getGDALNoData();
+          if (noData === undefined) noData = null;
+          const data = (await image.readRasters())[0];
+
+          let min = Infinity, max = -Infinity;
+          for (let i = 0; i < data.length; i++) {
+            const v = data[i];
+            if (noData !== null && v === noData) continue;
+            if (!isFinite(v)) continue;
+            if (v < min) min = v;
+            if (v > max) max = v;
+          }
+          if (!isFinite(min)) { min = 0; max = 1; }
+          const range = max - min || 1;
+
+          const band = new Array(height);
+          for (let r = 0; r < height; r++) {
+            band[r] = data.subarray(r * width, (r + 1) * width);
+          }
+          const georaster = {
+            values: [band],
+            height, width,
+            pixelHeight: (ymax - ymin) / height,
+            pixelWidth: (xmax - xmin) / width,
+            xmin, xmax, ymin, ymax,
+            noDataValue: noData,
+            projection: 4326,
+            numberOfRasters: 1,
+            mins: [min], maxs: [max], ranges: [range],
+          };
+          const ramp = rampFor(item.id);
+
+          if (currentLayer) { map.removeLayer(currentLayer); currentLayer = null; }
+
+          currentLayer = new GeoRasterLayer({
+            georaster,
+            opacity: 0.85,
+            resolution: 256,
+            pixelValuesToColorFn: (values) => {
+              const v = values[0];
+              if (v === null || v === undefined || isNaN(v)) return null;
+              if (noData !== null && noData !== undefined && v === noData) return null;
+              return ramp.fn(clamp01((v - min) / range));
+            },
+          });
+          currentLayer.addTo(map);
+          map.fitBounds(currentLayer.getBounds());
+
+          // Active info / download
+          const label = strings.labels[item.id] || (item.properties && item.properties.title) || item.id;
+          $("active-title").textContent = label;
+          $("legend-bar").style.background = ramp.css;
+          $("legend-min").textContent = Number(min.toFixed(2)).toString();
+          $("legend-max").textContent = Number(max.toFixed(2)).toString();
+          $("legend").hidden = false;
+
+          const fileName = asset.href.split("/").pop();
+          const dl = $("download-link");
+          dl.href = url;
+          dl.setAttribute("download", fileName);
+          $("download-name").textContent = fileName;
+          $("download-size").textContent = fmtBytes(sizeBytes);
+          $("active-info").hidden = false;
+        } catch (err) {
+          console.error("Layer load failed:", err);
+          showError(strings.error);
+        } finally {
+          showLoader(false);
+        }
+      }
+
+      function renderList(items) {
+        const ul = $("layer-list");
+        ul.innerHTML = "";
+        items.forEach((item) => {
+          const li = document.createElement("li");
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "layer-item";
+          btn.setAttribute("aria-pressed", "false");
+          btn.textContent =
+            strings.labels[item.id] ||
+            (item.properties && item.properties.title) ||
+            item.id;
+          btn.addEventListener("click", () => loadItem(item, btn));
+          li.appendChild(btn);
+          ul.appendChild(li);
+          item._btn = btn;
+        });
+      }
+
+      async function init() {
+        try {
+          const catUrl = new URL(base + "/stac/catalog.json", location.origin).href;
+          const cat = await (await fetch(catUrl)).json();
+          const child = cat.links.find((l) => l.rel === "child");
+          const colUrl = new URL(child.href, catUrl).href;
+          const col = await (await fetch(colUrl)).json();
+          const itemLinks = col.links.filter((l) => l.rel === "item");
+
+          const items = [];
+          for (const il of itemLinks) {
+            const itemUrl = new URL(il.href, colUrl).href;
+            const item = await (await fetch(itemUrl)).json();
+            item._self = itemUrl;
+            items.push(item);
+          }
+          renderList(items);
+          if (items.length) loadItem(items[0], items[0]._btn);
+        } catch (err) {
+          console.error("Catalog load failed:", err);
+          showError(strings.error);
+        }
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+      } else {
+        init();
+      }
+    })();
+  </script>
 </Layout>
 
 <style>
-.map-list { display: flex; flex-direction: column; gap: 2.5rem; }
+.prototype-banner {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  color: #5c4a00;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+.explorer-intro {
+  color: #333;
+  max-width: 70ch;
+  margin-bottom: 2rem;
+}
+
+.explorer {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+/* Sidebar */
+.layer-panel {
+  max-width: 240px;
+  display: flex;
+  flex-direction: column;
+}
+.panel-heading {
+  font-family: var(--font);
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: var(--green-dark);
+  margin-bottom: 0.75rem;
+}
+.layer-list {
+  list-style: none;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.layer-item {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: 0.92rem;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 0.55rem 0.7rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.layer-item:hover {
+  background: var(--green-tint);
+}
+.layer-item.active {
+  background: var(--green-light);
+  color: var(--green-dark);
+  font-weight: 600;
+}
+
+.active-info {
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+}
+.active-heading {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+.active-title {
+  font-size: 1rem;
+  color: var(--green-dark);
+  font-weight: 600;
+  margin-bottom: 0.85rem;
+}
+.legend {
+  margin-bottom: 1rem;
+}
+.legend-bar {
+  height: 10px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+}
+.legend-range {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+
+.download-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+  background: var(--green);
+  color: #fff;
+  padding: 0.6rem 0.8rem;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+.download-btn:hover { background: var(--green-dark); }
+.dl-icon { font-size: 1.15rem; }
+.dl-text { display: flex; flex-direction: column; line-height: 1.25; }
+.dl-action { font-size: 0.9rem; font-weight: 600; }
+.dl-name { font-size: 0.72rem; opacity: 0.9; word-break: break-all; }
+.dl-size { font-size: 0.72rem; opacity: 0.8; }
+
+/* Map */
+.map-wrap {
+  position: relative;
+  min-height: 500px;
+}
+.map {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  min-height: 500px;
+  background: var(--green-tint);
+  z-index: 0;
+}
+.map-loader {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: 8px;
+  z-index: 500;
+}
+.map-loader[hidden] { display: none; }
+.spinner {
+  width: 38px;
+  height: 38px;
+  border: 4px solid var(--green-light);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.map-error {
+  position: absolute;
+  left: 50%;
+  top: 1rem;
+  transform: translateX(-50%);
+  background: #f8d7da;
+  border: 1px solid #f1aeb5;
+  color: #842029;
+  padding: 0.5rem 0.9rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  z-index: 600;
+}
+
+@media (max-width: 768px) {
+  .explorer { grid-template-columns: 1fr; }
+  .layer-panel { max-width: none; }
+}
 </style>

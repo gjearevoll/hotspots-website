@@ -1,0 +1,19 @@
+{
+  "type": "Collection",
+  "id": "hotspot-demo",
+  "stac_version": "1.0.0",
+  "title": "Hotspot Demo Products",
+  "description": "Synthetic raster layers illustrating future Hotspot data products.",
+  "license": "CC-BY-4.0",
+  "extent": {
+    "spatial": {"bbox": [[4.0, 57.5, 31.5, 71.5]]},
+    "temporal": {"interval": [["2024-01-01T00:00:00Z", null]]}
+  },
+  "links": [
+    {"rel": "self", "href": "./collection.json"},
+    {"rel": "root", "href": "../../catalog.json"},
+    {"rel": "item", "href": "./items/species_richness_norway_demo.json"},
+    {"rel": "item", "href": "./items/hotspot_index_norway_demo.json"},
+    {"rel": "item", "href": "./items/sampling_effort_norway_demo.json"}
+  ]
+}

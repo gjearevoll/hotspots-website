@@ -1,0 +1,29 @@
+{
+  "type": "Feature",
+  "stac_version": "1.0.0",
+  "id": "sampling_effort_norway_demo",
+  "collection": "hotspot-demo",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [[[4.0,57.5],[31.5,57.5],[31.5,71.5],[4.0,71.5],[4.0,57.5]]]
+  },
+  "bbox": [4.0, 57.5, 31.5, 71.5],
+  "properties": {
+    "datetime": "2024-01-01T00:00:00Z",
+    "title": "Sampling Effort Norway (DEMO)",
+    "description": "Sampling effort per grid cell across Norway. Synthetic test data."
+  },
+  "assets": {
+    "data": {
+      "href": "../../../files/sampling_effort_norway_demo.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "Sampling Effort (COG)",
+      "roles": ["data"]
+    }
+  },
+  "links": [
+    {"rel": "self", "href": "./sampling_effort_norway_demo.json"},
+    {"rel": "root", "href": "../../../catalog.json"},
+    {"rel": "collection", "href": "../collection.json"}
+  ]
+}

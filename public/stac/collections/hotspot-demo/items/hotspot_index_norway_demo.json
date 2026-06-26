@@ -1,0 +1,29 @@
+{
+  "type": "Feature",
+  "stac_version": "1.0.0",
+  "id": "hotspot_index_norway_demo",
+  "collection": "hotspot-demo",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [[[4.0,57.5],[31.5,57.5],[31.5,71.5],[4.0,71.5],[4.0,57.5]]]
+  },
+  "bbox": [4.0, 57.5, 31.5, 71.5],
+  "properties": {
+    "datetime": "2024-01-01T00:00:00Z",
+    "title": "Hotspot Index Norway (DEMO)",
+    "description": "Biodiversity hotspot index per grid cell across Norway. Synthetic test data."
+  },
+  "assets": {
+    "data": {
+      "href": "../../../files/hotspot_index_norway_demo.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "Hotspot Index (COG)",
+      "roles": ["data"]
+    }
+  },
+  "links": [
+    {"rel": "self", "href": "./hotspot_index_norway_demo.json"},
+    {"rel": "root", "href": "../../../catalog.json"},
+    {"rel": "collection", "href": "../collection.json"}
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "type": "Catalog",
+  "id": "hotspot-catalog",
+  "stac_version": "1.0.0",
+  "title": "Hotspot Project – Biodiversity Maps Norway",
+  "description": "Derived biodiversity raster products from the Hotspot project, NTNU Gjærevollsenteret. NOTE: Current data is synthetic test data only.",
+  "links": [
+    {"rel": "self", "href": "./catalog.json"},
+    {"rel": "root", "href": "./catalog.json"},
+    {"rel": "child", "href": "./collections/hotspot-demo/collection.json"}
+  ]
+}
