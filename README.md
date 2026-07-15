@@ -56,6 +56,146 @@ public/
 
 ---
 
+## Data browser — map explorer (🚧 under construction)
+
+> **Status:** Architecture decided, implementation in progress.
+> This section describes the intended solution. Not all parts are built yet.
+
+The **Utforsk / Explore** tab will let visitors browse and download biodiversity
+raster maps produced by the Hotspot project, rendered interactively in the browser
+without requiring any GIS software.
+
+### How it will work
+
+```
+Zenodo (file storage + DOI)
+  └── GeoTIFF files (Cloud Optimized)
+        ↑ read at build time via Zenodo REST API
+STAC catalog (JSON files in public/stac/)
+  └── describes all available map layers
+        ↑ read at runtime by the Explore page
+Astro page — src/pages/[no|en]/kart.astro
+  └── Leaflet map + layer list, reads STAC catalog at page load
+        ↓ COG tiles streamed directly from Zenodo to the browser
+Download button → redirects to Zenodo file URL (no data duplication)
+```
+
+All map files live on Zenodo. The website holds only JSON catalog files and
+the Leaflet-based viewer. No map data passes through GitHub.
+
+### Storage architecture on Zenodo
+
+One Zenodo Community collects all Hotspot datasets. Within it, records are
+organised by product type, not by date — each record is versioned over time:
+
+```
+Zenodo Community: hotspot-project (gjearevollsenteret)
+  ├── Record: Artsrikhet Norge          ← versioned, updated ~quarterly
+  ├── Record: Hotspot-indeks Norge      ← versioned, updated ~quarterly
+  ├── Record: Prøvetakingsinnsats Norge ← versioned, updated ~quarterly
+  ├── Record: Fugler enkeltarter        ← updated rarely
+  ├── Record: Karplanter enkeltarter    ← updated rarely
+  └── ...
+```
+
+Each record has:
+- A **concept DOI** (permanent, always points to latest version) — cite this in papers
+- A **version DOI** (permanent, points to a specific version) — cite this for reproducibility
+
+### STAC catalog
+
+The catalog lives in `public/stac/` and is a set of plain JSON files following the
+[STAC 1.0.0 standard](https://stacspec.org/). It is generated automatically at
+build time from Zenodo metadata and GeoTIFF headers.
+
+```
+public/stac/
+  catalog.json
+  collections/
+    artsrikhet/
+      collection.json
+      items/
+        artsrikhet_norge_500m_2025-Q2.json
+        ...
+    hotspot/
+      ...
+```
+
+### Metadata convention
+
+Spatial metadata (bounding box, resolution, projection) is read automatically
+from the GeoTIFF file headers using `rasterio`. No manual entry needed.
+
+All other domain-specific metadata is encoded as structured `key:value` keywords
+on the Zenodo record. This allows the build script to parse them without any
+custom API or schema.
+
+**Required keywords on every Zenodo record:**
+
+| Keyword | Allowed values | Example |
+|---|---|---|
+| `artsgruppe:` | `fugler`, `karplanter`, `insekter`, `alle` | `artsgruppe:fugler` |
+| `produkt:` | `artsrikhet`, `hotspot`, `prøvetaking`, `enkeltart` | `produkt:artsrikhet` |
+| `område:` | `norge`, `vestland`, `svalbard`, … | `område:norge` |
+| `sesong:` | `ÅÅÅÅ-Q1` … `ÅÅÅÅ-Q4` | `sesong:2025-Q2` |
+
+Standard Zenodo fields (title, description, creators, version, license) are used
+as-is and mapped directly into the STAC catalog and the website UI.
+
+**Example of a correctly tagged Zenodo record:**
+
+```
+Title:       Artsrikhet Norge 500m — Hotspot-prosjektet
+Description: Antall arter per 500×500 m gridcelle for Norge, basert på ...
+Version:     2025-Q2
+License:     CC BY 4.0
+Keywords:    artsgruppe:alle, produkt:artsrikhet, område:norge, sesong:2025-Q2
+```
+
+### Workflow — uploading a new map version
+
+When a new map version is ready:
+
+1. Convert the GeoTIFF to Cloud Optimized GeoTIFF (COG) locally:
+   ```bash
+   rio cogeo create input.tif output_cog.tif --overview-level 6
+   rio cogeo validate output_cog.tif
+   ```
+2. Upload to the correct Zenodo record as a new version
+3. Fill in the standard metadata fields (title, description, creators, version)
+4. Add the required `key:value` keywords (see table above)
+5. Publish — the nightly GitHub Actions build will pick up the new version
+   automatically, or trigger a manual build from the GitHub Actions tab
+
+No changes to the website repository are needed.
+
+### What is automatic vs manual (data browser)
+
+| Task | How |
+|---|---|
+| Detect new Zenodo records/versions | Automatic — nightly build queries Zenodo API |
+| Read spatial metadata (bbox, resolution, CRS) | Automatic — rasterio reads GeoTIFF header |
+| Read descriptive metadata (title, description) | Automatic — Zenodo API |
+| Read domain metadata (artsgruppe, produkt, …) | Automatic — parsed from Zenodo keywords |
+| Generate STAC catalog JSON | Automatic — build-time script |
+| Upload new map files to Zenodo | Manual — researcher uploads via zenodo.org |
+| Tag Zenodo record with correct keywords | Manual — follow the keyword table above |
+
+### File format requirements
+
+All map files stored on Zenodo must be **Cloud Optimized GeoTIFF (COG)**.
+COG files have an internal tile structure that allows the browser to fetch only
+the portion of the file it needs, without downloading the full file.
+
+Convert using [rio-cogeo](https://cogeotiff.github.io/rio-cogeo/):
+
+```bash
+pip install rio-cogeo
+rio cogeo create input.tif output.tif --overview-level 6
+```
+
+---
+
 ## Running locally
 
 ```bash
