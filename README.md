@@ -1,6 +1,6 @@
 # Hotspots — project website
 
-Static website for the [Hotspots project](https://nva.sikt.no/projects/2769822) at Gjærevollsenteret, NTNU. Built with [Astro](https://astro.build) and hosted on GitHub Pages.
+Static website for the [Hotspots project](https://nva.sikt.no/projects/2769822) at the Gjærevoll Centre, NTNU. Built with [Astro](https://astro.build) and hosted on GitHub Pages.
 
 **Live site:** https://gjearevoll.github.io/hotspots-website/
 
