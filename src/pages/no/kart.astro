@@ -13,7 +13,8 @@ const strings = {
   downloadLabel: "Last ned",
   error: "Klarte ikkje å laste kartlaget.",
   uncertaintyToggle: "Vis usikkerheit",
-  uncertaintySuffix: " – usikkerheit",
+  uncertaintyLegendHeading: "Usikkerheit",
+  quartileLabels: ["Middels usikkerheit", "Høg usikkerheit"],
   labels: {
     allspeciesstats_birdsfinal: "Artsrikdom (fugl)",
     ansvarsarterstats_birdsfinal: "Ansvarsartar (fugl)",
@@ -53,6 +54,13 @@ const strings = {
               <span id="legend-max"></span>
             </div>
           </div>
+          <div id="uncertainty-legend" class="uncertainty-legend" hidden>
+            <div class="uncertainty-legend-heading">{strings.uncertaintyLegendHeading}</div>
+            <ul class="quartile-swatches">
+              <li><span class="swatch" style="background:rgba(229,115,115,0.20)"></span>{strings.quartileLabels[0]}</li>
+              <li><span class="swatch" style="background:rgba(229,115,115,0.32)"></span>{strings.quartileLabels[1]}</li>
+            </ul>
+          </div>
           <a id="download-link" class="download-btn" download>
             <span class="dl-icon" aria-hidden="true">📥</span>
             <span class="dl-text">
@@ -80,6 +88,8 @@ const strings = {
   <script is:inline src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script is:inline src="https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.js"></script>
   <script is:inline src="https://unpkg.com/georaster-layer-for-leaflet@3.10.0/dist/georaster-layer-for-leaflet.min.js"></script>
+  <script is:inline src="https://cdn.jsdelivr.net/npm/d3-array@3/dist/d3-array.min.js"></script>
+  <script is:inline src="https://cdn.jsdelivr.net/npm/d3-contour@4/dist/d3-contour.min.js"></script>
 
   <script is:inline define:vars={{ base, strings }}>
     (function () {
@@ -105,26 +115,43 @@ const strings = {
             fn: (t) => `rgb(${lerp(255,30,t)},${lerp(255,90,t)},${lerp(255,168,t)})`,
           };
         }
-        // green -> yellow -> red (viridis-like warm)
+        // light green -> dark green (single hue, species/responsibility richness)
         return {
-          css: "linear-gradient(to right,#2a6e3f,#ffd23f,#d02f30)",
-          fn: (t) => {
-            if (t < 0.5) {
-              const u = t / 0.5;
-              return `rgb(${lerp(42,255,u)},${lerp(110,210,u)},${lerp(63,63,u)})`;
-            }
-            const u = (t - 0.5) / 0.5;
-            return `rgb(${lerp(255,208,u)},${lerp(210,47,u)},${lerp(63,48,u)})`;
-          },
+          css: "linear-gradient(to right,#e8f2eb,#1d4d2a)",
+          fn: (t) => `rgb(${lerp(232,29,t)},${lerp(242,77,t)},${lerp(235,42,t)})`,
         };
       }
 
-      function uncertaintyRamp() {
-        // white -> purple, visually distinct from the mean-value ramps
-        return {
-          css: "linear-gradient(to right,#ffffff,#6a3d9a)",
-          fn: (t) => `rgb(${lerp(255,106,t)},${lerp(255,61,t)},${lerp(255,154,t)})`,
+      // Uncertainty overlay ------------------------------------------------
+      // Only the 75th-90th and 90th+ percentile bands are drawn, as actual
+      // vector polygons traced around contiguous high-uncertainty regions
+      // with d3-contour, rather than a per-pixel raster classification —
+      // avoids the raster's grid-cell edges showing up as visible rectangles.
+      function computeThresholds(data, noData) {
+        const valid = [];
+        for (let i = 0; i < data.length; i++) {
+          const v = data[i];
+          if (noData !== null && v === noData) continue;
+          if (!isFinite(v)) continue;
+          valid.push(v);
+        }
+        valid.sort((a, b) => a - b);
+        const at = (p) => {
+          if (valid.length === 0) return 0;
+          return valid[Math.min(valid.length - 1, Math.floor(p * valid.length))];
         };
+        return { medium: at(0.75), high: at(0.9) };
+      }
+
+      // d3-contour needs a plain numeric grid; nodata/NaN cells are pushed
+      // far below any real threshold so they never appear inside a contour.
+      function sanitizeForContour(data, noData) {
+        const out = new Float64Array(data.length);
+        for (let i = 0; i < data.length; i++) {
+          const v = data[i];
+          out[i] = (noData !== null && v === noData) || !isFinite(v) ? -1e9 : v;
+        }
+        return out;
       }
 
       // Map --------------------------------------------------------------
@@ -135,6 +162,7 @@ const strings = {
       }).addTo(map);
 
       let currentLayer = null;
+      let uncertaintyLayer = null;
       // Holds the fully-parsed raster for the currently loaded item, so the
       // uncertainty toggle can re-render from a different band without refetching.
       let activeRaster = null;
@@ -146,17 +174,23 @@ const strings = {
         el.hidden = !msg;
       }
 
+      // Colour-scale max is capped at the 99th percentile rather than the
+      // true max, so a handful of extreme outlier cells don't compress the
+      // rest of the map into the low end of the ramp.
       function statsFor(data, noData) {
-        let min = Infinity, max = -Infinity;
+        let min = Infinity;
+        const valid = [];
         for (let i = 0; i < data.length; i++) {
           const v = data[i];
           if (noData !== null && v === noData) continue;
           if (!isFinite(v)) continue;
           if (v < min) min = v;
-          if (v > max) max = v;
+          valid.push(v);
         }
-        if (!isFinite(min)) { min = 0; max = 1; }
-        return { min, max, range: max - min || 1 };
+        if (!isFinite(min)) return { min: 0, max: 1, range: 1 };
+        valid.sort((a, b) => a - b);
+        const max = valid[Math.min(valid.length - 1, Math.floor(0.99 * valid.length))];
+        return { min, max, range: (max - min) || 1 };
       }
 
       function toRows(data, width, height) {
@@ -167,11 +201,11 @@ const strings = {
         return band;
       }
 
-      // Renders one band ("mean" or "uncertainty") of the currently loaded
-      // item from the cached activeRaster, without re-fetching the file.
-      function renderBand(kind) {
+      // Renders the mean/base band of the currently loaded item from the
+      // cached activeRaster, without re-fetching the file.
+      function renderMean() {
         if (!activeRaster) return;
-        const bandIndex = activeRaster.bandMap[kind];
+        const bandIndex = activeRaster.bandMap.mean;
         if (bandIndex === undefined) return;
 
         const { width, height, xmin, xmax, ymin, ymax, noData, bandsData, itemId, label } = activeRaster;
@@ -190,7 +224,7 @@ const strings = {
           numberOfRasters: 1,
           mins: [min], maxs: [max], ranges: [range],
         };
-        const ramp = kind === "uncertainty" ? uncertaintyRamp() : rampFor(itemId);
+        const ramp = rampFor(itemId);
 
         if (currentLayer) { map.removeLayer(currentLayer); currentLayer = null; }
 
@@ -208,11 +242,56 @@ const strings = {
         currentLayer.addTo(map);
         map.fitBounds(currentLayer.getBounds());
 
-        $("active-title").textContent = kind === "uncertainty" ? label + strings.uncertaintySuffix : label;
+        $("active-title").textContent = label;
         $("legend-bar").style.background = ramp.css;
         $("legend-min").textContent = Number(min.toFixed(2)).toString();
         $("legend-max").textContent = Number(max.toFixed(2)).toString();
         $("legend").hidden = false;
+      }
+
+      // Adds the uncertainty band as a semi-transparent, percentile-banded
+      // overlay on top of the currently rendered richness layer.
+      function renderUncertaintyOverlay() {
+        if (!activeRaster) return;
+        const bandIndex = activeRaster.bandMap.uncertainty;
+        if (bandIndex === undefined) return;
+
+        const { width, height, xmin, xmax, ymin, ymax, noData, bandsData } = activeRaster;
+        const data = bandsData[bandIndex];
+        const { medium, high } = computeThresholds(data, noData);
+        const sanitized = sanitizeForContour(data, noData);
+
+        const contourGen = d3.contours().size([width, height]);
+        const mediumBand = contourGen.contour(sanitized, medium);
+        const highBand = contourGen.contour(sanitized, high);
+
+        // Grid indices -> lat/lng, using the raster's own bounding box.
+        const coordsToLatLng = ([x, y]) => L.latLng(
+          ymax - (y / height) * (ymax - ymin),
+          xmin + (x / width) * (xmax - xmin)
+        );
+        const polygonLayer = (geometry, fillOpacity) => L.geoJSON(
+          { type: "Feature", geometry, properties: {} },
+          {
+            coordsToLatLng,
+            style: { stroke: false, fillColor: "#e57373", fillOpacity, fillRule: "evenodd", interactive: false },
+          }
+        );
+
+        removeUncertaintyOverlay();
+
+        // Draw the medium band first, then the (nested) high band on top —
+        // the overlap naturally reads as a darker red, no polygon
+        // subtraction needed since the high-band area is a subset.
+        uncertaintyLayer = L.layerGroup([
+          polygonLayer(mediumBand, 0.20),
+          polygonLayer(highBand, 0.32),
+        ]);
+        uncertaintyLayer.addTo(map);
+      }
+
+      function removeUncertaintyOverlay() {
+        if (uncertaintyLayer) { map.removeLayer(uncertaintyLayer); uncertaintyLayer = null; }
       }
 
       async function loadItem(item, liEl) {
@@ -255,8 +334,10 @@ const strings = {
 
           toggle.checked = false;
           toggleWrap.hidden = bandMap.uncertainty === undefined;
+          removeUncertaintyOverlay();
+          $("uncertainty-legend").hidden = true;
 
-          renderBand("mean");
+          renderMean();
 
           const fileName = asset.href.split("/").pop();
           const dl = $("download-link");
@@ -294,7 +375,13 @@ const strings = {
       }
 
       $("uncertainty-toggle").addEventListener("change", (e) => {
-        renderBand(e.target.checked ? "uncertainty" : "mean");
+        if (e.target.checked) {
+          renderUncertaintyOverlay();
+          $("uncertainty-legend").hidden = false;
+        } else {
+          removeUncertaintyOverlay();
+          $("uncertainty-legend").hidden = true;
+        }
       });
 
       async function init() {
@@ -429,6 +516,38 @@ const strings = {
 
 .legend {
   margin-bottom: 1rem;
+}
+.uncertainty-legend {
+  margin-bottom: 1rem;
+}
+.uncertainty-legend-heading {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+}
+.quartile-swatches {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--text);
+}
+.quartile-swatches li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
 }
 .legend-bar {
   height: 10px;
