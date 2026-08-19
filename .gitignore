@@ -4,3 +4,7 @@ node_modules/
 .env
 .env.*
 !.env.example
+
+# Fetched at build time by scripts/fetch-zenodo-data.mjs — not tracked in git,
+# regenerated fresh on every deploy so the site always serves the latest Zenodo version.
+public/stac/files/*.tif

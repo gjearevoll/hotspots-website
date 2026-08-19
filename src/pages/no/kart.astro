@@ -5,17 +5,19 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 const strings = {
   banner:
-    "⚠️ Dette er ein prototype. Kartdataene som visast er syntetiske testdata og representerer ikkje reelle resultat frå Hotspot-prosjektet.",
+    "⚠️ Karta viser førebels berre modellerte resultat for fugl frå Hotspot-prosjektet. Fleire artsgrupper kjem etter kvart.",
   intro:
     "Utforsk biodiversitetskart frå Hotspot-prosjektet. Vel eit kartlag i lista for å vise det på kartet. Karta er tilgjengelege som Cloud Optimized GeoTIFF og kan lastast ned enkeltvis eller brukast direkte i GIS-programvare.",
   panelHeading: "Kartlag",
   activeHeading: "Aktivt lag",
   downloadLabel: "Last ned",
   error: "Klarte ikkje å laste kartlaget.",
+  uncertaintyToggle: "Vis usikkerheit",
+  uncertaintySuffix: " – usikkerheit",
   labels: {
-    species_richness_norway_demo: "Artsrikdom",
-    hotspot_index_norway_demo: "Hotspot-indeks",
-    sampling_effort_norway_demo: "Prøvetakingsinnsats",
+    allspeciesstats_birdsfinal: "Artsrikdom (fugl)",
+    ansvarsarterstats_birdsfinal: "Ansvarsartar (fugl)",
+    bias_birdsfinal: "Prøvetakingsskeivheit (fugl)",
   },
 };
 ---
@@ -40,6 +42,10 @@ const strings = {
         <div id="active-info" class="active-info" hidden>
           <div class="active-heading">{strings.activeHeading}</div>
           <div id="active-title" class="active-title"></div>
+          <label id="uncertainty-toggle-wrap" class="uncertainty-toggle" hidden>
+            <input type="checkbox" id="uncertainty-toggle" />
+            <span>{strings.uncertaintyToggle}</span>
+          </label>
           <div id="legend" class="legend" hidden>
             <div id="legend-bar" class="legend-bar"></div>
             <div class="legend-range">
@@ -92,7 +98,7 @@ const strings = {
       function clamp01(t) { return t < 0 ? 0 : t > 1 ? 1 : t; }
 
       function rampFor(id) {
-        if (id.indexOf("sampling_effort") !== -1) {
+        if (id.indexOf("bias") !== -1) {
           // white -> blue
           return {
             css: "linear-gradient(to right,#ffffff,#1e5aa8)",
@@ -113,6 +119,14 @@ const strings = {
         };
       }
 
+      function uncertaintyRamp() {
+        // white -> purple, visually distinct from the mean-value ramps
+        return {
+          css: "linear-gradient(to right,#ffffff,#6a3d9a)",
+          fn: (t) => `rgb(${lerp(255,106,t)},${lerp(255,61,t)},${lerp(255,154,t)})`,
+        };
+      }
+
       // Map --------------------------------------------------------------
       const map = L.map("map", { minZoom: 3, maxZoom: 12 }).fitBounds(NORWAY_BOUNDS);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -121,12 +135,84 @@ const strings = {
       }).addTo(map);
 
       let currentLayer = null;
+      // Holds the fully-parsed raster for the currently loaded item, so the
+      // uncertainty toggle can re-render from a different band without refetching.
+      let activeRaster = null;
 
       function showLoader(on) { $("map-loader").hidden = !on; }
       function showError(msg) {
         const el = $("map-error");
         el.textContent = msg;
         el.hidden = !msg;
+      }
+
+      function statsFor(data, noData) {
+        let min = Infinity, max = -Infinity;
+        for (let i = 0; i < data.length; i++) {
+          const v = data[i];
+          if (noData !== null && v === noData) continue;
+          if (!isFinite(v)) continue;
+          if (v < min) min = v;
+          if (v > max) max = v;
+        }
+        if (!isFinite(min)) { min = 0; max = 1; }
+        return { min, max, range: max - min || 1 };
+      }
+
+      function toRows(data, width, height) {
+        const band = new Array(height);
+        for (let r = 0; r < height; r++) {
+          band[r] = data.subarray(r * width, (r + 1) * width);
+        }
+        return band;
+      }
+
+      // Renders one band ("mean" or "uncertainty") of the currently loaded
+      // item from the cached activeRaster, without re-fetching the file.
+      function renderBand(kind) {
+        if (!activeRaster) return;
+        const bandIndex = activeRaster.bandMap[kind];
+        if (bandIndex === undefined) return;
+
+        const { width, height, xmin, xmax, ymin, ymax, noData, bandsData, itemId, label } = activeRaster;
+        const data = bandsData[bandIndex];
+        const { min, max, range } = statsFor(data, noData);
+        const rows = toRows(data, width, height);
+
+        const georaster = {
+          values: [rows],
+          height, width,
+          pixelHeight: (ymax - ymin) / height,
+          pixelWidth: (xmax - xmin) / width,
+          xmin, xmax, ymin, ymax,
+          noDataValue: noData,
+          projection: 4326,
+          numberOfRasters: 1,
+          mins: [min], maxs: [max], ranges: [range],
+        };
+        const ramp = kind === "uncertainty" ? uncertaintyRamp() : rampFor(itemId);
+
+        if (currentLayer) { map.removeLayer(currentLayer); currentLayer = null; }
+
+        currentLayer = new GeoRasterLayer({
+          georaster,
+          opacity: 0.85,
+          resolution: 256,
+          pixelValuesToColorFn: (values) => {
+            const v = values[0];
+            if (v === null || v === undefined || isNaN(v)) return null;
+            if (noData !== null && noData !== undefined && v === noData) return null;
+            return ramp.fn(clamp01((v - min) / range));
+          },
+        });
+        currentLayer.addTo(map);
+        map.fitBounds(currentLayer.getBounds());
+
+        $("active-title").textContent = kind === "uncertainty" ? label + strings.uncertaintySuffix : label;
+        $("legend-bar").style.background = ramp.css;
+        $("legend-min").textContent = Number(min.toFixed(2)).toString();
+        $("legend-max").textContent = Number(max.toFixed(2)).toString();
+        $("legend").hidden = false;
       }
 
       async function loadItem(item, liEl) {
@@ -140,6 +226,8 @@ const strings = {
         }
         showError("");
         showLoader(true);
+        const toggle = $("uncertainty-toggle");
+        const toggleWrap = $("uncertainty-toggle-wrap");
         try {
           const asset = item.assets.data;
           const url = new URL(asset.href, item._self).href;
@@ -158,59 +246,17 @@ const strings = {
           const [xmin, ymin, xmax, ymax] = image.getBoundingBox();
           let noData = image.getGDALNoData();
           if (noData === undefined) noData = null;
-          const data = (await image.readRasters())[0];
+          const bandsData = await image.readRasters();
 
-          let min = Infinity, max = -Infinity;
-          for (let i = 0; i < data.length; i++) {
-            const v = data[i];
-            if (noData !== null && v === noData) continue;
-            if (!isFinite(v)) continue;
-            if (v < min) min = v;
-            if (v > max) max = v;
-          }
-          if (!isFinite(min)) { min = 0; max = 1; }
-          const range = max - min || 1;
-
-          const band = new Array(height);
-          for (let r = 0; r < height; r++) {
-            band[r] = data.subarray(r * width, (r + 1) * width);
-          }
-          const georaster = {
-            values: [band],
-            height, width,
-            pixelHeight: (ymax - ymin) / height,
-            pixelWidth: (xmax - xmin) / width,
-            xmin, xmax, ymin, ymax,
-            noDataValue: noData,
-            projection: 4326,
-            numberOfRasters: 1,
-            mins: [min], maxs: [max], ranges: [range],
-          };
-          const ramp = rampFor(item.id);
-
-          if (currentLayer) { map.removeLayer(currentLayer); currentLayer = null; }
-
-          currentLayer = new GeoRasterLayer({
-            georaster,
-            opacity: 0.85,
-            resolution: 256,
-            pixelValuesToColorFn: (values) => {
-              const v = values[0];
-              if (v === null || v === undefined || isNaN(v)) return null;
-              if (noData !== null && noData !== undefined && v === noData) return null;
-              return ramp.fn(clamp01((v - min) / range));
-            },
-          });
-          currentLayer.addTo(map);
-          map.fitBounds(currentLayer.getBounds());
-
-          // Active info / download
+          const bandMap = (item.properties && item.properties.bands) || { mean: 0 };
           const label = strings.labels[item.id] || (item.properties && item.properties.title) || item.id;
-          $("active-title").textContent = label;
-          $("legend-bar").style.background = ramp.css;
-          $("legend-min").textContent = Number(min.toFixed(2)).toString();
-          $("legend-max").textContent = Number(max.toFixed(2)).toString();
-          $("legend").hidden = false;
+
+          activeRaster = { width, height, xmin, xmax, ymin, ymax, noData, bandsData, bandMap, itemId: item.id, label };
+
+          toggle.checked = false;
+          toggleWrap.hidden = bandMap.uncertainty === undefined;
+
+          renderBand("mean");
 
           const fileName = asset.href.split("/").pop();
           const dl = $("download-link");
@@ -246,6 +292,10 @@ const strings = {
           item._btn = btn;
         });
       }
+
+      $("uncertainty-toggle").addEventListener("change", (e) => {
+        renderBand(e.target.checked ? "uncertainty" : "mean");
+      });
 
       async function init() {
         try {
@@ -364,6 +414,19 @@ const strings = {
   font-weight: 600;
   margin-bottom: 0.85rem;
 }
+.uncertainty-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text);
+  cursor: pointer;
+  margin-bottom: 0.85rem;
+}
+.uncertainty-toggle input {
+  cursor: pointer;
+}
+
 .legend {
   margin-bottom: 1rem;
 }

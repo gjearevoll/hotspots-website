@@ -1,0 +1,30 @@
+{
+  "type": "Feature",
+  "stac_version": "1.0.0",
+  "id": "allspeciesstats_birdsfinal",
+  "collection": "hotspot-birds",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [[[-0.96,57.75],[31.95,57.75],[31.95,71.57],[-0.96,71.57],[-0.96,57.75]]]
+  },
+  "bbox": [-0.96, 57.75, 31.95, 71.57],
+  "properties": {
+    "datetime": "2026-07-15T00:00:00Z",
+    "title": "Bird species richness (Norway)",
+    "description": "Modelled species richness across all bird species, scaled 0-1. Band 2 holds the paired uncertainty layer.",
+    "bands": {"mean": 0, "uncertainty": 1}
+  },
+  "assets": {
+    "data": {
+      "href": "../../../files/allspeciesstats_birdsfinal.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "Species richness + uncertainty (COG)",
+      "roles": ["data"]
+    }
+  },
+  "links": [
+    {"rel": "self", "href": "./allspeciesstats_birdsfinal.json"},
+    {"rel": "root", "href": "../../../catalog.json"},
+    {"rel": "collection", "href": "../collection.json"}
+  ]
+}
