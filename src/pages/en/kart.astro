@@ -15,6 +15,24 @@ const strings = {
   uncertaintyToggle: "Show uncertainty",
   uncertaintyLegendHeading: "Uncertainty",
   quartileLabels: ["Medium uncertainty", "High uncertainty"],
+  legendLow: "Low",
+  legendHigh: "High",
+  filterLabels: {
+    taxa: "Taxa",
+    group: "Species group",
+    metric: "Map type",
+  },
+  taxaLabels: {
+    birds: "Birds",
+  },
+  groupLabels: {
+    all: "All species",
+    concern: "Species of national concern",
+  },
+  metricLabels: {
+    richness: "Species richness",
+    bias: "Sampling bias",
+  },
   labels: {
     allspeciesstats_birdsfinal: "Species richness (birds)",
     ansvarsarterstats_birdsfinal: "Responsibility species (birds)",
@@ -38,15 +56,24 @@ const strings = {
     <div class="explorer">
       <aside class="layer-panel">
         <h2 class="panel-heading">{strings.panelHeading}</h2>
-        <ul id="layer-list" class="layer-list" aria-label={strings.panelHeading}></ul>
+        <div class="filter-group">
+          <div class="filter-field">
+            <label for="taxa-select">{strings.filterLabels.taxa}</label>
+            <select id="taxa-select"></select>
+          </div>
+          <div class="filter-field">
+            <label for="metric-select">{strings.filterLabels.metric}</label>
+            <select id="metric-select"></select>
+          </div>
+          <div class="filter-field" id="group-field">
+            <label for="group-select">{strings.filterLabels.group}</label>
+            <select id="group-select"></select>
+          </div>
+        </div>
 
         <div id="active-info" class="active-info" hidden>
           <div class="active-heading">{strings.activeHeading}</div>
           <div id="active-title" class="active-title"></div>
-          <label id="uncertainty-toggle-wrap" class="uncertainty-toggle" hidden>
-            <input type="checkbox" id="uncertainty-toggle" />
-            <span>{strings.uncertaintyToggle}</span>
-          </label>
           <div id="legend" class="legend" hidden>
             <div id="legend-bar" class="legend-bar"></div>
             <div class="legend-range">
@@ -54,11 +81,15 @@ const strings = {
               <span id="legend-max"></span>
             </div>
           </div>
+          <label id="uncertainty-toggle-wrap" class="uncertainty-toggle" hidden>
+            <input type="checkbox" id="uncertainty-toggle" />
+            <span>{strings.uncertaintyToggle}</span>
+          </label>
           <div id="uncertainty-legend" class="uncertainty-legend" hidden>
             <div class="uncertainty-legend-heading">{strings.uncertaintyLegendHeading}</div>
             <ul class="quartile-swatches">
-              <li><span class="swatch" style="background:rgba(229,115,115,0.20)"></span>{strings.quartileLabels[0]}</li>
-              <li><span class="swatch" style="background:rgba(229,115,115,0.32)"></span>{strings.quartileLabels[1]}</li>
+              <li><span class="swatch" style="background:rgba(229,115,115,0.26)"></span>{strings.quartileLabels[0]}</li>
+              <li><span class="swatch" style="background:rgba(229,115,115,0.40)"></span>{strings.quartileLabels[1]}</li>
             </ul>
           </div>
           <a id="download-link" class="download-btn" download>
@@ -140,7 +171,7 @@ const strings = {
           if (valid.length === 0) return 0;
           return valid[Math.min(valid.length - 1, Math.floor(p * valid.length))];
         };
-        return { medium: at(0.75), high: at(0.9) };
+        return { medium: at(0.6), high: at(0.9) };
       }
 
       // d3-contour needs a plain numeric grid; nodata/NaN cells are pushed
@@ -166,6 +197,18 @@ const strings = {
       // Holds the fully-parsed raster for the currently loaded item, so the
       // uncertainty toggle can re-render from a different band without refetching.
       let activeRaster = null;
+      // Raster the uncertainty overlay actually reads from. Usually the same
+      // object as activeRaster, but bias layers have no uncertainty band of
+      // their own — for those it points at the sibling "all species
+      // richness" raster instead, fetched lazily and cached below.
+      let uncertaintySource = null;
+      // Only auto-fit the view on the first layer load — switching layers
+      // afterwards should keep whatever pan/zoom the user has set.
+      let hasFittedBounds = false;
+      // Parsed COGs, keyed by STAC item id — avoids refetching a raster that
+      // was already loaded, whether as a main layer or a borrowed
+      // uncertainty source.
+      const rasterCache = new Map();
 
       function showLoader(on) { $("map-loader").hidden = !on; }
       function showError(msg) {
@@ -199,6 +242,59 @@ const strings = {
           band[r] = data.subarray(r * width, (r + 1) * width);
         }
         return band;
+      }
+
+      // Fetches and fully parses a STAC item's COG, caching the result by
+      // item id so it's only ever downloaded once per session.
+      async function fetchRaster(item) {
+        if (rasterCache.has(item.id)) return rasterCache.get(item.id);
+
+        const asset = item.assets.data;
+        const url = new URL(asset.href, item._self).href;
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error("HTTP " + resp.status);
+        const buf = await resp.arrayBuffer();
+        const sizeBytes = buf.byteLength;
+
+        // Read the COG fully into memory on the main thread (no web worker)
+        // so the map layer renders from memory and never re-fetches the file.
+        const tiff = await GeoTIFF.fromArrayBuffer(buf);
+        const image = await tiff.getImage();
+        const width = image.getWidth();
+        const height = image.getHeight();
+        const [xmin, ymin, xmax, ymax] = image.getBoundingBox();
+        let noData = image.getGDALNoData();
+        if (noData === undefined) noData = null;
+        const bandsData = await image.readRasters();
+
+        const bandMap = (item.properties && item.properties.bands) || { mean: 0 };
+        const label = strings.labels[item.id] || (item.properties && item.properties.title) || item.id;
+
+        const raster = {
+          width, height, xmin, xmax, ymin, ymax, noData, bandsData, bandMap,
+          itemId: item.id, label, url,
+          fileName: asset.href.split("/").pop(),
+          sizeBytes,
+        };
+        rasterCache.set(item.id, raster);
+        return raster;
+      }
+
+      // Bias layers have no uncertainty band of their own — the sampling
+      // bias surface is computed across all species, so it borrows the
+      // "all species richness" uncertainty band for the same taxa.
+      async function findUncertaintySource(item, raster) {
+        if (raster.bandMap.uncertainty !== undefined) return raster;
+        const parsed = parseItemId(item.id);
+        if (!parsed || parsed.metric !== "bias") return null;
+        const sibling = itemsIndex.get(indexKey(parsed.taxa, "richness", "all"));
+        if (!sibling) return null;
+        try {
+          return await fetchRaster(sibling);
+        } catch (err) {
+          console.error("Failed to load borrowed uncertainty layer:", err);
+          return null;
+        }
       }
 
       // Renders the mean/base band of the currently loaded item from the
@@ -240,23 +336,26 @@ const strings = {
           },
         });
         currentLayer.addTo(map);
-        map.fitBounds(currentLayer.getBounds());
+        if (!hasFittedBounds) {
+          map.fitBounds(currentLayer.getBounds());
+          hasFittedBounds = true;
+        }
 
         $("active-title").textContent = label;
         $("legend-bar").style.background = ramp.css;
-        $("legend-min").textContent = Number(min.toFixed(2)).toString();
-        $("legend-max").textContent = Number(max.toFixed(2)).toString();
+        $("legend-min").textContent = strings.legendLow;
+        $("legend-max").textContent = strings.legendHigh;
         $("legend").hidden = false;
       }
 
       // Adds the uncertainty band as a semi-transparent, percentile-banded
       // overlay on top of the currently rendered richness layer.
       function renderUncertaintyOverlay() {
-        if (!activeRaster) return;
-        const bandIndex = activeRaster.bandMap.uncertainty;
+        if (!uncertaintySource) return;
+        const bandIndex = uncertaintySource.bandMap.uncertainty;
         if (bandIndex === undefined) return;
 
-        const { width, height, xmin, xmax, ymin, ymax, noData, bandsData } = activeRaster;
+        const { width, height, xmin, xmax, ymin, ymax, noData, bandsData } = uncertaintySource;
         const data = bandsData[bandIndex];
         const { medium, high } = computeThresholds(data, noData);
         const sanitized = sanitizeForContour(data, noData);
@@ -284,8 +383,8 @@ const strings = {
         // the overlap naturally reads as a darker red, no polygon
         // subtraction needed since the high-band area is a subset.
         uncertaintyLayer = L.layerGroup([
-          polygonLayer(mediumBand, 0.20),
-          polygonLayer(highBand, 0.32),
+          polygonLayer(mediumBand, 0.26),
+          polygonLayer(highBand, 0.40),
         ]);
         uncertaintyLayer.addTo(map);
       }
@@ -294,57 +393,106 @@ const strings = {
         if (uncertaintyLayer) { map.removeLayer(uncertaintyLayer); uncertaintyLayer = null; }
       }
 
-      async function loadItem(item, liEl) {
-        document.querySelectorAll(".layer-item").forEach((e) => {
-          e.classList.remove("active");
-          e.setAttribute("aria-pressed", "false");
+      // Layer filters (taxa / species group / metric) ---------------------
+      // Item ids follow the pattern "{metricPrefix}_{taxa}final", e.g.
+      // "allspeciesstats_birdsfinal" or "bias_birdsfinal". Parsing that
+      // pattern lets the three dropdowns be built from whatever items the
+      // catalog actually contains, so new taxa/metrics show up on their own.
+      function parseItemId(id) {
+        const m = /^(allspeciesstats|ansvarsarterstats|bias)_(.+)final$/.exec(id);
+        if (!m) return null;
+        return {
+          metric: m[1] === "bias" ? "bias" : "richness",
+          group: m[1] === "ansvarsarterstats" ? "concern" : "all",
+          taxa: m[2],
+        };
+      }
+
+      const METRIC_ORDER = ["richness", "bias"];
+      const GROUP_ORDER = ["all", "concern"];
+
+      let itemsIndex = new Map();
+      let taxaOrder = [];
+      const sel = { taxa: null, metric: null, group: null };
+
+      function indexKey(taxa, metric, group) { return taxa + "|" + metric + "|" + group; }
+
+      function buildIndex(items) {
+        itemsIndex = new Map();
+        taxaOrder = [];
+        items.forEach((item) => {
+          const parsed = parseItemId(item.id);
+          if (!parsed) return;
+          itemsIndex.set(indexKey(parsed.taxa, parsed.metric, parsed.group), item);
+          if (taxaOrder.indexOf(parsed.taxa) === -1) taxaOrder.push(parsed.taxa);
         });
-        if (liEl) {
-          liEl.classList.add("active");
-          liEl.setAttribute("aria-pressed", "true");
-        }
+      }
+
+      function metricsForTaxa(taxa) {
+        return METRIC_ORDER.filter((metric) =>
+          GROUP_ORDER.some((group) => itemsIndex.has(indexKey(taxa, metric, group)))
+        );
+      }
+
+      function groupsForTaxaMetric(taxa, metric) {
+        return GROUP_ORDER.filter((group) => itemsIndex.has(indexKey(taxa, metric, group)));
+      }
+
+      // Fills a <select> with the given values, preferring `current` if it's
+      // still a valid option, and returns whichever value ended up selected.
+      function fillSelect(selectEl, options, labels, current) {
+        selectEl.innerHTML = "";
+        options.forEach((value) => {
+          const opt = document.createElement("option");
+          opt.value = value;
+          opt.textContent = labels[value] || value;
+          selectEl.appendChild(opt);
+        });
+        const value = options.indexOf(current) !== -1 ? current : options[0];
+        selectEl.value = value;
+        return value;
+      }
+
+      // Rebuilds the metric options for sel.taxa, then the group options for
+      // the resulting metric — a species group split doesn't exist for every
+      // metric (e.g. bias), so the group field hides itself when there's
+      // only one option.
+      function refreshMetricAndGroup(preferredMetric, preferredGroup) {
+        const metrics = metricsForTaxa(sel.taxa);
+        sel.metric = fillSelect($("metric-select"), metrics, strings.metricLabels, preferredMetric);
+
+        const groups = groupsForTaxaMetric(sel.taxa, sel.metric);
+        sel.group = fillSelect($("group-select"), groups, strings.groupLabels, preferredGroup);
+        $("group-field").hidden = groups.length < 2;
+      }
+
+      function applySelection() {
+        const item = itemsIndex.get(indexKey(sel.taxa, sel.metric, sel.group));
+        if (item) loadItem(item);
+      }
+
+      async function loadItem(item) {
         showError("");
         showLoader(true);
         const toggle = $("uncertainty-toggle");
         const toggleWrap = $("uncertainty-toggle-wrap");
         try {
-          const asset = item.assets.data;
-          const url = new URL(asset.href, item._self).href;
-
-          const resp = await fetch(url);
-          if (!resp.ok) throw new Error("HTTP " + resp.status);
-          const buf = await resp.arrayBuffer();
-          const sizeBytes = buf.byteLength;
-
-          // Read the COG fully into memory on the main thread (no web worker)
-          // so the map layer renders from memory and never re-fetches the file.
-          const tiff = await GeoTIFF.fromArrayBuffer(buf);
-          const image = await tiff.getImage();
-          const width = image.getWidth();
-          const height = image.getHeight();
-          const [xmin, ymin, xmax, ymax] = image.getBoundingBox();
-          let noData = image.getGDALNoData();
-          if (noData === undefined) noData = null;
-          const bandsData = await image.readRasters();
-
-          const bandMap = (item.properties && item.properties.bands) || { mean: 0 };
-          const label = strings.labels[item.id] || (item.properties && item.properties.title) || item.id;
-
-          activeRaster = { width, height, xmin, xmax, ymin, ymax, noData, bandsData, bandMap, itemId: item.id, label };
+          const raster = await fetchRaster(item);
+          activeRaster = raster;
+          uncertaintySource = await findUncertaintySource(item, raster);
 
           toggle.checked = false;
-          toggleWrap.hidden = bandMap.uncertainty === undefined;
+          toggleWrap.hidden = !uncertaintySource;
           removeUncertaintyOverlay();
           $("uncertainty-legend").hidden = true;
 
           renderMean();
 
-          const fileName = asset.href.split("/").pop();
           const dl = $("download-link");
-          dl.href = url;
-          dl.setAttribute("download", fileName);
-          $("download-name").textContent = fileName;
-          $("download-size").textContent = fmtBytes(sizeBytes);
+          dl.href = raster.url;
+          dl.setAttribute("download", raster.fileName);
+          $("download-name").textContent = raster.fileName;
+          $("download-size").textContent = fmtBytes(raster.sizeBytes);
           $("active-info").hidden = false;
         } catch (err) {
           console.error("Layer load failed:", err);
@@ -354,25 +502,19 @@ const strings = {
         }
       }
 
-      function renderList(items) {
-        const ul = $("layer-list");
-        ul.innerHTML = "";
-        items.forEach((item) => {
-          const li = document.createElement("li");
-          const btn = document.createElement("button");
-          btn.type = "button";
-          btn.className = "layer-item";
-          btn.setAttribute("aria-pressed", "false");
-          btn.textContent =
-            strings.labels[item.id] ||
-            (item.properties && item.properties.title) ||
-            item.id;
-          btn.addEventListener("click", () => loadItem(item, btn));
-          li.appendChild(btn);
-          ul.appendChild(li);
-          item._btn = btn;
-        });
-      }
+      $("taxa-select").addEventListener("change", (e) => {
+        sel.taxa = e.target.value;
+        refreshMetricAndGroup(sel.metric, sel.group);
+        applySelection();
+      });
+      $("metric-select").addEventListener("change", (e) => {
+        refreshMetricAndGroup(e.target.value, sel.group);
+        applySelection();
+      });
+      $("group-select").addEventListener("change", (e) => {
+        sel.group = e.target.value;
+        applySelection();
+      });
 
       $("uncertainty-toggle").addEventListener("change", (e) => {
         if (e.target.checked) {
@@ -400,8 +542,11 @@ const strings = {
             item._self = itemUrl;
             items.push(item);
           }
-          renderList(items);
-          if (items.length) loadItem(items[0], items[0]._btn);
+          buildIndex(items);
+          if (!taxaOrder.length) throw new Error("No recognised layers in catalog");
+          sel.taxa = fillSelect($("taxa-select"), taxaOrder, strings.taxaLabels, taxaOrder[0]);
+          refreshMetricAndGroup("richness", "all");
+          applySelection();
         } catch (err) {
           console.error("Catalog load failed:", err);
           showError(strings.error);
@@ -454,34 +599,36 @@ const strings = {
   color: var(--green-dark);
   margin-bottom: 0.75rem;
 }
-.layer-list {
-  list-style: none;
-  margin: 0 0 1.5rem;
-  padding: 0;
+.filter-group {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.85rem;
+  margin-bottom: 1.5rem;
 }
-.layer-item {
+.filter-field label {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 0.3rem;
+}
+.filter-field select {
   width: 100%;
-  text-align: left;
   font: inherit;
   font-size: 0.92rem;
   color: var(--text);
-  background: transparent;
-  border: none;
+  background: #fff;
+  border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 0.55rem 0.7rem;
+  padding: 0.5rem 0.6rem;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
 }
-.layer-item:hover {
-  background: var(--green-tint);
+.filter-field select:hover {
+  border-color: var(--green);
 }
-.layer-item.active {
-  background: var(--green-light);
-  color: var(--green-dark);
-  font-weight: 600;
+.filter-field[hidden] {
+  display: none;
 }
 
 .active-info {
