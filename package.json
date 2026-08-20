@@ -6,7 +6,8 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "optimise-images": "node scripts/optimise-images.js"
+    "optimise-images": "node scripts/optimise-images.js",
+    "fetch-zenodo-data": "node scripts/fetch-zenodo-data.mjs"
   },
   "dependencies": {
     "astro": "^4.15.0",

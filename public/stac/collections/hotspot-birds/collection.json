@@ -1,0 +1,20 @@
+{
+  "type": "Collection",
+  "id": "hotspot-birds",
+  "stac_version": "1.0.0",
+  "title": "Hotspot Bird Products",
+  "description": "Derived biodiversity raster products for birds from the Hotspot project, NTNU Gjærevollsenteret. Modelled with integrated species distribution models (INLA/inlabru) from GBIF occurrence data.",
+  "license": "CC-BY-4.0",
+  "extent": {
+    "spatial": {"bbox": [[-0.96, 57.75, 31.95, 71.57]]},
+    "temporal": {"interval": [["2026-07-15T00:00:00Z", null]]}
+  },
+  "links": [
+    {"rel": "self", "href": "./collection.json"},
+    {"rel": "root", "href": "../../catalog.json"},
+    {"rel": "cite-as", "href": "https://doi.org/10.5281/zenodo.21383991"},
+    {"rel": "item", "href": "./items/allspeciesstats_birdsfinal.json"},
+    {"rel": "item", "href": "./items/ansvarsarterstats_birdsfinal.json"},
+    {"rel": "item", "href": "./items/bias_birdsfinal.json"}
+  ]
+}

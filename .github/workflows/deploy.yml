@@ -26,7 +26,11 @@ jobs:
         with:
           node-version: 24
 
+      - name: Install GDAL
+        run: sudo apt-get update && sudo apt-get install -y gdal-bin
+
       - run: npm install
+      - run: npm run fetch-zenodo-data
       - run: npm run build
 
       - uses: actions/upload-pages-artifact@v3
