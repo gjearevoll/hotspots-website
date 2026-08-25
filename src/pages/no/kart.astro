@@ -5,7 +5,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 const strings = {
   banner:
-    "⚠️ Karta viser førebels berre modellerte resultat for fugl frå Hotspot-prosjektet. Fleire artsgrupper kjem etter kvart.",
+    "⚠️ Karta viser modellerte resultat for fugl, karplanter og insekt frå Hotspot-prosjektet. Fleire artsgrupper kjem etter kvart.",
   intro:
     "Utforsk biodiversitetskart frå Hotspot-prosjektet. Vel eit kartlag i lista for å vise det på kartet. Karta er tilgjengelege som Cloud Optimized GeoTIFF og kan lastast ned enkeltvis eller brukast direkte i GIS-programvare.",
   panelHeading: "Kartlag",
@@ -24,6 +24,8 @@ const strings = {
   },
   taxaLabels: {
     birds: "Fugl",
+    vascularPlants: "Karplanter",
+    insects: "Insekt",
   },
   groupLabels: {
     all: "Alle artar",
@@ -34,9 +36,18 @@ const strings = {
     bias: "Prøvetakingsskeivheit",
   },
   labels: {
-    allspeciesstats_birdsfinal: "Artsrikdom (fugl)",
-    ansvarsarterstats_birdsfinal: "Ansvarsartar (fugl)",
-    bias_birdsfinal: "Prøvetakingsskeivheit (fugl)",
+    all_birds_richness: "Artsrikdom (fugl)",
+    all_birds_bias: "Prøvetakingsskeivheit (fugl)",
+    all_vascularPlants_richness: "Artsrikdom (karplanter)",
+    all_vascularPlants_bias: "Prøvetakingsskeivheit (karplanter)",
+    all_insects_richness: "Artsrikdom (insekt)",
+    all_insects_bias: "Prøvetakingsskeivheit (insekt)",
+    concern_birds_richness: "Ansvarsartar (fugl)",
+    concern_birds_bias: "Prøvetakingsskeivheit, ansvarsartar (fugl)",
+    concern_vascularPlants_richness: "Ansvarsartar (karplanter)",
+    concern_vascularPlants_bias: "Prøvetakingsskeivheit, ansvarsartar (karplanter)",
+    concern_insects_richness: "Ansvarsartar (insekt)",
+    concern_insects_bias: "Prøvetakingsskeivheit, ansvarsartar (insekt)",
   },
 };
 ---
@@ -280,21 +291,10 @@ const strings = {
         return raster;
       }
 
-      // Bias layers have no uncertainty band of their own — the sampling
-      // bias surface is computed across all species, so it borrows the
-      // "all species richness" uncertainty band for the same taxa.
+      // Every item (richness or bias) carries its own paired uncertainty
+      // band for its taxon, so the source is always the item's own raster.
       async function findUncertaintySource(item, raster) {
-        if (raster.bandMap.uncertainty !== undefined) return raster;
-        const parsed = parseItemId(item.id);
-        if (!parsed || parsed.metric !== "bias") return null;
-        const sibling = itemsIndex.get(indexKey(parsed.taxa, "richness", "all"));
-        if (!sibling) return null;
-        try {
-          return await fetchRaster(sibling);
-        } catch (err) {
-          console.error("Failed to load borrowed uncertainty layer:", err);
-          return null;
-        }
+        return raster.bandMap.uncertainty !== undefined ? raster : null;
       }
 
       // Renders the mean/base band of the currently loaded item from the
@@ -394,18 +394,14 @@ const strings = {
       }
 
       // Layer filters (taxa / species group / metric) ---------------------
-      // Item ids follow the pattern "{metricPrefix}_{taxa}final", e.g.
-      // "allspeciesstats_birdsfinal" or "bias_birdsfinal". Parsing that
+      // Item ids follow the pattern "{group}_{taxa}_{metric}", e.g.
+      // "all_birds_richness" or "concern_insects_bias". Parsing that
       // pattern lets the three dropdowns be built from whatever items the
       // catalog actually contains, so new taxa/metrics show up on their own.
       function parseItemId(id) {
-        const m = /^(allspeciesstats|ansvarsarterstats|bias)_(.+)final$/.exec(id);
+        const m = /^(all|concern)_(.+)_(richness|bias)$/.exec(id);
         if (!m) return null;
-        return {
-          metric: m[1] === "bias" ? "bias" : "richness",
-          group: m[1] === "ansvarsarterstats" ? "concern" : "all",
-          taxa: m[2],
-        };
+        return { group: m[1], taxa: m[2], metric: m[3] };
       }
 
       const METRIC_ORDER = ["richness", "bias"];

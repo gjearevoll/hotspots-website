@@ -12,11 +12,14 @@ const OUT_DIR = new URL("../public/stac/files/", import.meta.url).pathname;
 const TMP_DIR = join(tmpdir(), `zenodo-fetch-${Date.now()}`);
 
 // Only these rasters are wired into the map — other files in the record (e.g.
-// metadata.json) are provenance/documentation and aren't fetched here.
+// metadata.json) are provenance/documentation and aren't fetched here. As of
+// v1.0.1 each file is a single multi-band COG covering all taxa (bands named
+// "{taxa}_richness" / "{taxa}_uncertainty" / "{taxa}_bias"), not one file per
+// taxon/metric — see collections/hotspot-species/items/*.json for the band
+// indices the map reads from each file.
 const WANTED_FILES = new Set([
-  "allspeciesstats_birdsfinal.tiff",
-  "ansvarsarterstats_birdsfinal.tiff",
-  "bias_birdsfinal.tiff",
+  "allspeciesUploadRaster.tiff",
+  "ansvarsarterUploadRaster.tiff",
 ]);
 
 function humanSize(bytes) {
