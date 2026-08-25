@@ -13,6 +13,9 @@ const strings = {
   downloadLabel: "Last ned",
   error: "Klarte ikkje å laste kartlaget.",
   uncertaintyToggle: "Vis usikkerheit",
+  uncertaintyInfoLabel: "Om usikkerheit",
+  uncertaintyInfo:
+    "Usikkerheit er her vist på ein relativ skala per taksonomisk gruppe. Eit område med høg usikkerheit for fugl (ei gruppe vi har mykje data om) kan difor vere vesentleg mindre usikkert enn eit tilsvarande område for insekt (som vi har relativt lite data om).",
   uncertaintyLegendHeading: "Usikkerheit",
   quartileLabels: ["Middels usikkerheit", "Høg usikkerheit"],
   legendLow: "Låg",
@@ -92,10 +95,24 @@ const strings = {
               <span id="legend-max"></span>
             </div>
           </div>
-          <label id="uncertainty-toggle-wrap" class="uncertainty-toggle" hidden>
-            <input type="checkbox" id="uncertainty-toggle" />
-            <span>{strings.uncertaintyToggle}</span>
-          </label>
+          <div id="uncertainty-toggle-wrap" class="uncertainty-row" hidden>
+            <label class="uncertainty-toggle">
+              <input type="checkbox" id="uncertainty-toggle" />
+              <span>{strings.uncertaintyToggle}</span>
+            </label>
+            <div class="info-wrap">
+              <button
+                type="button"
+                id="uncertainty-info-btn"
+                class="info-btn"
+                aria-label={strings.uncertaintyInfoLabel}
+                aria-expanded="false"
+              >?</button>
+              <div id="uncertainty-info-popup" class="info-popup" role="tooltip" hidden>
+                {strings.uncertaintyInfo}
+              </div>
+            </div>
+          </div>
           <div id="uncertainty-legend" class="uncertainty-legend" hidden>
             <div class="uncertainty-legend-heading">{strings.uncertaintyLegendHeading}</div>
             <ul class="quartile-swatches">
@@ -165,7 +182,7 @@ const strings = {
       }
 
       // Uncertainty overlay ------------------------------------------------
-      // Only the 75th-90th and 90th+ percentile bands are drawn, as actual
+      // Only the 60th-90th and 90th+ percentile bands are drawn, as actual
       // vector polygons traced around contiguous high-uncertainty regions
       // with d3-contour, rather than a per-pixel raster classification —
       // avoids the raster's grid-cell edges showing up as visible rectangles.
@@ -512,6 +529,30 @@ const strings = {
         applySelection();
       });
 
+      // Info popup for the uncertainty toggle ------------------------------
+      (() => {
+        const infoBtn = $("uncertainty-info-btn");
+        const infoPopup = $("uncertainty-info-popup");
+
+        function closePopup() {
+          infoPopup.hidden = true;
+          infoBtn.setAttribute("aria-expanded", "false");
+        }
+
+        infoBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const wasHidden = infoPopup.hidden;
+          infoPopup.hidden = !wasHidden;
+          infoBtn.setAttribute("aria-expanded", String(wasHidden));
+        });
+        document.addEventListener("click", (e) => {
+          if (!infoPopup.hidden && !infoPopup.contains(e.target) && e.target !== infoBtn) closePopup();
+        });
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape" && !infoPopup.hidden) closePopup();
+        });
+      })();
+
       $("uncertainty-toggle").addEventListener("change", (e) => {
         if (e.target.checked) {
           renderUncertaintyOverlay();
@@ -644,6 +685,12 @@ const strings = {
   font-weight: 600;
   margin-bottom: 0.85rem;
 }
+.uncertainty-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.85rem;
+}
 .uncertainty-toggle {
   display: flex;
   align-items: center;
@@ -651,10 +698,50 @@ const strings = {
   font-size: 0.85rem;
   color: var(--text);
   cursor: pointer;
-  margin-bottom: 0.85rem;
 }
 .uncertainty-toggle input {
   cursor: pointer;
+}
+.info-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.info-btn {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.info-btn:hover,
+.info-btn[aria-expanded="true"] {
+  border-color: var(--green);
+  color: var(--green-dark);
+}
+.info-popup {
+  position: absolute;
+  top: 130%;
+  left: 0;
+  z-index: 20;
+  width: 260px;
+  max-width: 70vw;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--text);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
 }
 
 .legend {
