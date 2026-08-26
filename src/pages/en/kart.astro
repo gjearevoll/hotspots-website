@@ -4,10 +4,10 @@ import Layout from "../../layouts/Layout.astro";
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 const strings = {
-  banner:
-    "⚠️ Maps show modelled results for birds, vascular plants and insects from the Hotspot project. More taxonomic groups will follow.",
   intro:
     "Explore biodiversity maps from the Hotspot project. Select a layer to display it on the map. Maps are available as Cloud Optimized GeoTIFF and can be downloaded individually or used directly in GIS software.",
+  dataLinkPrefix: "A full description of the data production can be found at",
+  dataLinkText: "the following link",
   panelHeading: "Layers",
   activeHeading: "Active layer",
   downloadLabel: "Download",
@@ -64,8 +64,11 @@ const strings = {
   </div>
 
   <div class="section">
-    <div class="prototype-banner" role="note">{strings.banner}</div>
     <p class="explorer-intro">{strings.intro}</p>
+    <p class="explorer-intro">
+      {strings.dataLinkPrefix}{" "}
+      <strong><a href="https://www.biorxiv.org/content/10.64898/2026.05.19.721053v1" target="_blank" rel="noopener noreferrer">{strings.dataLinkText}</a></strong>.
+    </p>
 
     <div class="explorer">
       <aside class="layer-panel">
@@ -182,7 +185,7 @@ const strings = {
       }
 
       // Uncertainty overlay ------------------------------------------------
-      // Only the 60th-90th and 90th+ percentile bands are drawn, as actual
+      // Only the 50th-75th and 75th+ percentile bands are drawn, as actual
       // vector polygons traced around contiguous high-uncertainty regions
       // with d3-contour, rather than a per-pixel raster classification —
       // avoids the raster's grid-cell edges showing up as visible rectangles.
@@ -199,7 +202,7 @@ const strings = {
           if (valid.length === 0) return 0;
           return valid[Math.min(valid.length - 1, Math.floor(p * valid.length))];
         };
-        return { medium: at(0.6), high: at(0.9) };
+        return { medium: at(0.5), high: at(0.75) };
       }
 
       // d3-contour needs a plain numeric grid; nodata/NaN cells are pushed
@@ -469,14 +472,17 @@ const strings = {
       // Rebuilds the metric options for sel.taxa, then the group options for
       // the resulting metric — a species group split doesn't exist for every
       // metric (e.g. bias), so the group field hides itself when there's
-      // only one option.
+      // only one option. Bias is also forced to the "all" item even though
+      // the catalog carries a duplicate "concern" one, since sampling bias
+      // doesn't actually differ between species groups.
       function refreshMetricAndGroup(preferredMetric, preferredGroup) {
         const metrics = metricsForTaxa(sel.taxa);
         sel.metric = fillSelect($("metric-select"), metrics, strings.metricLabels, preferredMetric);
 
         const groups = groupsForTaxaMetric(sel.taxa, sel.metric);
-        sel.group = fillSelect($("group-select"), groups, strings.groupLabels, preferredGroup);
-        $("group-field").hidden = groups.length < 2;
+        const groupHasNoEffect = sel.metric === "bias";
+        sel.group = fillSelect($("group-select"), groups, strings.groupLabels, groupHasNoEffect ? "all" : preferredGroup);
+        $("group-field").hidden = groups.length < 2 || groupHasNoEffect;
       }
 
       function applySelection() {
@@ -489,15 +495,24 @@ const strings = {
         showLoader(true);
         const toggle = $("uncertainty-toggle");
         const toggleWrap = $("uncertainty-toggle-wrap");
+        const wasShowingUncertainty = toggle.checked;
         try {
           const raster = await fetchRaster(item);
           activeRaster = raster;
           uncertaintySource = await findUncertaintySource(item, raster);
 
-          toggle.checked = false;
           toggleWrap.hidden = !uncertaintySource;
           removeUncertaintyOverlay();
-          $("uncertainty-legend").hidden = true;
+
+          // Carries the toggle across a taxa/group switch instead of always
+          // resetting it, so uncertainty stays visible while browsing.
+          toggle.checked = wasShowingUncertainty && !!uncertaintySource;
+          if (toggle.checked) {
+            renderUncertaintyOverlay();
+            $("uncertainty-legend").hidden = false;
+          } else {
+            $("uncertainty-legend").hidden = true;
+          }
 
           renderMean();
 
@@ -600,20 +615,14 @@ const strings = {
 </Layout>
 
 <style>
-.prototype-banner {
-  background: #fff3cd;
-  border: 1px solid #ffc107;
-  border-radius: 8px;
-  padding: 1rem 1.25rem;
-  margin-bottom: 1.5rem;
-  color: #5c4a00;
-  font-size: 0.95rem;
-  line-height: 1.5;
-}
 .explorer-intro {
   color: #333;
   max-width: 70ch;
   margin-bottom: 2rem;
+}
+
+.explorer-intro a {
+  color: var(--green-dark);
 }
 
 .explorer {
