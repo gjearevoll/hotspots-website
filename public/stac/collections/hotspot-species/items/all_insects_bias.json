@@ -1,0 +1,72 @@
+{
+  "type": "Feature",
+  "stac_version": "1.0.0",
+  "id": "all_insects_bias",
+  "collection": "hotspot-species",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          -0.95,
+          57.75
+        ],
+        [
+          31.95,
+          57.75
+        ],
+        [
+          31.95,
+          71.56
+        ],
+        [
+          -0.95,
+          71.56
+        ],
+        [
+          -0.95,
+          57.75
+        ]
+      ]
+    ]
+  },
+  "bbox": [
+    -0.95,
+    57.75,
+    31.95,
+    71.56
+  ],
+  "properties": {
+    "datetime": "2026-08-24T00:00:00Z",
+    "title": "Insect sampling bias (Norway)",
+    "description": "Modelled sampling bias for insect occurrence records, scaled 0-1. Shares its uncertainty band with the species richness layer for this taxon.",
+    "bands": {
+      "mean": 8,
+      "uncertainty": 7
+    }
+  },
+  "assets": {
+    "data": {
+      "href": "../../../files/allspeciesUploadRaster.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "Insect sampling bias (Norway) (COG, multi-taxa multi-band)",
+      "roles": [
+        "data"
+      ]
+    }
+  },
+  "links": [
+    {
+      "rel": "self",
+      "href": "./all_insects_bias.json"
+    },
+    {
+      "rel": "root",
+      "href": "../../../catalog.json"
+    },
+    {
+      "rel": "collection",
+      "href": "../collection.json"
+    }
+  ]
+}

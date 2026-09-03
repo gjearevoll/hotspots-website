@@ -7,6 +7,6 @@
   "links": [
     {"rel": "self", "href": "./catalog.json"},
     {"rel": "root", "href": "./catalog.json"},
-    {"rel": "child", "href": "./collections/hotspot-birds/collection.json"}
+    {"rel": "child", "href": "./collections/hotspot-species/collection.json"}
   ]
 }

@@ -1,0 +1,29 @@
+{
+  "type": "Collection",
+  "id": "hotspot-species",
+  "stac_version": "1.0.0",
+  "title": "Hotspot Biodiversity Products",
+  "description": "Derived biodiversity raster products for birds, vascular plants and insects from the Hotspot project, NTNU Gjærevollsenteret. Modelled with integrated species distribution models (INLA/inlabru) from GBIF occurrence data. Uncertainty is reported on a scale relative to each taxon individually: a high-uncertainty area for birds (a well-recorded taxon) may be substantially less uncertain in absolute terms than a similarly-scored area for insects (a sparsely-recorded taxon).",
+  "license": "CC-BY-4.0",
+  "extent": {
+    "spatial": {"bbox": [[-0.95, 57.75, 31.95, 71.56]]},
+    "temporal": {"interval": [["2026-08-24T00:00:00Z", null]]}
+  },
+  "links": [
+    {"rel": "self", "href": "./collection.json"},
+    {"rel": "root", "href": "../../catalog.json"},
+    {"rel": "cite-as", "href": "https://doi.org/10.5281/zenodo.21383990"},
+    {"rel": "item", "href": "./items/all_birds_richness.json"},
+    {"rel": "item", "href": "./items/all_birds_bias.json"},
+    {"rel": "item", "href": "./items/all_vascularPlants_richness.json"},
+    {"rel": "item", "href": "./items/all_vascularPlants_bias.json"},
+    {"rel": "item", "href": "./items/all_insects_richness.json"},
+    {"rel": "item", "href": "./items/all_insects_bias.json"},
+    {"rel": "item", "href": "./items/concern_birds_richness.json"},
+    {"rel": "item", "href": "./items/concern_birds_bias.json"},
+    {"rel": "item", "href": "./items/concern_vascularPlants_richness.json"},
+    {"rel": "item", "href": "./items/concern_vascularPlants_bias.json"},
+    {"rel": "item", "href": "./items/concern_insects_richness.json"},
+    {"rel": "item", "href": "./items/concern_insects_bias.json"}
+  ]
+}
