@@ -37,8 +37,8 @@
     71.56
   ],
   "properties": {
-    "datetime": "2026-08-24T00:00:00Z",
-    "title": "Vascular plant responsibility species richness (Norway)",
+    "datetime": "2026-09-21T00:00:00Z",
+    "title": "Vascular plant richness, species of national responsibility (Norway)",
     "description": "Modelled richness of vascular plant species for which Norway holds a significant share of the population/range (\"ansvarsarter\"), scaled 0-1. Uncertainty is on a scale relative to this taxon (see collection description).",
     "bands": {
       "mean": 3,
@@ -47,9 +47,9 @@
   },
   "assets": {
     "data": {
-      "href": "../../../files/ansvarsarterUploadRaster.tif",
+      "href": "../../../files/ansvarsArterUploadRaster.tif",
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
-      "title": "Vascular plant responsibility species richness (Norway) (COG, multi-taxa multi-band)",
+      "title": "Vascular plant richness, species of national responsibility (Norway) (COG, multi-taxa multi-band)",
       "roles": [
         "data"
       ]

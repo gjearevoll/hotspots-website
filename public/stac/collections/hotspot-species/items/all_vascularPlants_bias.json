@@ -37,7 +37,7 @@
     71.56
   ],
   "properties": {
-    "datetime": "2026-08-24T00:00:00Z",
+    "datetime": "2026-09-21T00:00:00Z",
     "title": "Vascular plant sampling bias (Norway)",
     "description": "Modelled sampling bias for vascular plant occurrence records, scaled 0-1. Shares its uncertainty band with the species richness layer for this taxon.",
     "bands": {
@@ -47,7 +47,7 @@
   },
   "assets": {
     "data": {
-      "href": "../../../files/allspeciesUploadRaster.tif",
+      "href": "../../../files/allSpeciesUploadRaster.tif",
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
       "title": "Vascular plant sampling bias (Norway) (COG, multi-taxa multi-band)",
       "roles": [

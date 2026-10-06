@@ -1,7 +1,7 @@
 {
   "type": "Feature",
   "stac_version": "1.0.0",
-  "id": "all_birds_richness",
+  "id": "threatened_insects_richness",
   "collection": "hotspot-species",
   "geometry": {
     "type": "Polygon",
@@ -38,18 +38,18 @@
   ],
   "properties": {
     "datetime": "2026-09-21T00:00:00Z",
-    "title": "Bird species richness (Norway)",
-    "description": "Modelled species richness across all bird species, scaled 0-1. Uncertainty is on a scale relative to this taxon (see collection description).",
+    "title": "Insect richness, threatened species (Norway)",
+    "description": "Modelled richness of insect species assessed as threatened on the Norwegian Red List, scaled 0-1. Uncertainty is on a scale relative to this taxon (see collection description).",
     "bands": {
-      "mean": 0,
-      "uncertainty": 1
+      "mean": 6,
+      "uncertainty": 7
     }
   },
   "assets": {
     "data": {
-      "href": "../../../files/allSpeciesUploadRaster.tif",
+      "href": "../../../files/threatenedSpeciesUploadRaster.tif",
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
-      "title": "Bird species richness (Norway) (COG, multi-taxa multi-band)",
+      "title": "Insect richness, threatened species (Norway) (COG, multi-taxa multi-band)",
       "roles": [
         "data"
       ]
@@ -58,7 +58,7 @@
   "links": [
     {
       "rel": "self",
-      "href": "./all_birds_richness.json"
+      "href": "./threatened_insects_richness.json"
     },
     {
       "rel": "root",
