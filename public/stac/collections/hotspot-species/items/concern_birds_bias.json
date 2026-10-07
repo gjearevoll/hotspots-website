@@ -37,8 +37,8 @@
     71.56
   ],
   "properties": {
-    "datetime": "2026-08-24T00:00:00Z",
-    "title": "Bird sampling bias \u2014 responsibility species (Norway)",
+    "datetime": "2026-09-21T00:00:00Z",
+    "title": "Bird sampling bias — species of national responsibility (Norway)",
     "description": "Modelled sampling bias for bird responsibility-species occurrence records, scaled 0-1. Shares its uncertainty band with the responsibility species richness layer for this taxon.",
     "bands": {
       "mean": 2,
@@ -47,9 +47,9 @@
   },
   "assets": {
     "data": {
-      "href": "../../../files/ansvarsarterUploadRaster.tif",
+      "href": "../../../files/ansvarsArterUploadRaster.tif",
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
-      "title": "Bird sampling bias \u2014 responsibility species (Norway) (COG, multi-taxa multi-band)",
+      "title": "Bird sampling bias — species of national responsibility (Norway) (COG, multi-taxa multi-band)",
       "roles": [
         "data"
       ]
