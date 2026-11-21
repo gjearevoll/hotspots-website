@@ -1,4 +1,4 @@
-# Hotspots website — utviklarnotes
+# NaturAtlas-nettsida — utviklarnotes
 
 ## Språk og omsetjing
 Norsk (nynorsk) er hovudspråk. Engelsk er omsetjing.

@@ -1,6 +1,7 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import RepoCard from "../../components/RepoCard.astro";
+import { config } from "../../lib/config.ts";
 import { readFileSync } from "fs";
 import { join } from "path";
 import yaml from "js-yaml";
@@ -20,7 +21,7 @@ const repos = yaml.load(
   <div class="page-header">
     <div class="page-header-inner">
       <h1>Codebase</h1>
-      <p>Open source code from the Hotspots projects, available on GitHub.</p>
+      <p>Open source code from the {config.project.name.en} projects, available on GitHub.</p>
     </div>
   </div>
 

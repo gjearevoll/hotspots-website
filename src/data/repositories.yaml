@@ -7,14 +7,14 @@
 - name: "freshwaterHotspots"
   url: "https://github.com/gjearevoll/freshwaterHotspots"
   description:
-    no: "Tilpassa versjon av Hotspots-rørledningen for analyse av ferskvasstartar og akvatiske habitatmodellar."
-    en: "Adapted version of the Hotspots pipeline for analysis of freshwater species and aquatic habitat models."
+    no: "Tilpassa versjon av modellkoden i NaturAtlas for analyse av ferskvassartar og akvatiske habitatmodellar."
+    en: "Adapted version of the Nature Atlas Norway modelling pipeline for analysis of freshwater species and aquatic habitat models."
 
 - name: "HotspotsDerived"
   url: "https://github.com/gjearevoll/HotspotsDerived"
   description:
-    no: "Produksjon og lagring av avleia produkt frå Hotspot-prosjektene, inkludert samanstilte kartlag og aggregerte indeksar."
-    en: "Production and storage of derived products from the Hotspots projects, including composite map layers and aggregated indices."
+    no: "Produksjon og lagring av avleia produkt frå NaturAtlas-prosjekta, inkludert samanstilte kartlag og aggregerte indeksar."
+    en: "Production and storage of derived products from the Nature Atlas Norway projects, including composite map layers and aggregated indices."
 
 - name: "PointedSDMs"
   url: "https://github.com/gjearevoll/PointedSDMs"
