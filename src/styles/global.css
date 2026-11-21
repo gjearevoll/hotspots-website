@@ -610,13 +610,34 @@ nav a.active {
     gap: 2rem;
   }
 
+  /* Logo og språkval på første rad, menyen over heile breidda under */
   .header-inner {
+    position: relative;
     flex-wrap: wrap;
     gap: 0;
+    padding: 0 1rem;
+  }
+
+  .header-right {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .header-right .lang-switcher {
+    position: absolute;
+    top: 1.4rem;
+    right: 1rem;
+    margin-left: 0;
+  }
+
+  nav {
+    flex-wrap: wrap;
+    min-width: 0;
+    margin: 0 -0.55rem;
   }
 
   nav a {
-    padding: 0.8rem 0.7rem;
+    padding: 0.7rem 0.55rem;
     font-size: 0.85rem;
   }
 
@@ -639,5 +660,17 @@ nav a.active {
   .footer-inner {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+/* Dei minste mobilane: hald menyen på éi linje så langt det går */
+@media (max-width: 380px) {
+  nav {
+    margin: 0 -0.4rem;
+  }
+
+  nav a {
+    padding: 0.7rem 0.4rem;
+    font-size: 0.8rem;
   }
 }
