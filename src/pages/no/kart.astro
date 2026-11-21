@@ -1,5 +1,6 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import { config } from "../../lib/config.ts";
 import metadata from "../../data/hotspot-metadata.json";
 import zenodoRecord from "../../data/zenodo-record.json";
 
@@ -64,7 +65,7 @@ const fmt = new Intl.NumberFormat("nb-NO");
 
 const strings = {
   intro:
-    "Utforsk biodiversitetskart frå Hotspot-prosjektet. Vel eit kartlag i lista for å vise det på kartet. Karta er tilgjengelege som Cloud Optimized GeoTIFF og kan lastast ned enkeltvis eller brukast direkte i GIS-programvare.",
+    `Utforsk biodiversitetskart frå ${config.project.name.no}-prosjekta. Vel eit kartlag i lista for å vise det på kartet. Karta er tilgjengelege som Cloud Optimized GeoTIFF og kan lastast ned enkeltvis eller brukast direkte i GIS-programvare.`,
   dataLinkPrefix: "Ei fullstendig skildring av dataproduksjonen finn du på",
   dataLinkText: "følgjande lenke",
   panelHeading: "Kartlag",

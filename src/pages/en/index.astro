@@ -20,7 +20,7 @@ const recentPubs = await fetchPublications(cristin_project_id, { size: 3 });
   <section class="hero hero--carousel">
     <HeroCarousel />
     <div class="hero-inner">
-      <p class="hero-eyebrow">NTNU Gjærevoll Centre · The Hotspots projects</p>
+      <p class="hero-eyebrow">NTNU Gjærevoll Centre · The {config.project.name.en} projects</p>
       <h1>Comprehensive maps of<br/>biodiversity in Norway</h1>
       <p class="hero-tagline">
         We develop the knowledge base for area-based nature management using
@@ -32,7 +32,7 @@ const recentPubs = await fetchPublications(cristin_project_id, { size: 3 });
   <div class="section">
     <div class="two-col">
       <div class="prose">
-        <h2>About the Hotspots projects</h2>
+        <h2>About the {config.project.name.en} projects</h2>
         {projectDescription
           ? projectDescription.split("\n\n").map((para: string) => <p>{para}</p>)
           : <p>Description fetched from NVA at next build.</p>

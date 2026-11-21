@@ -1,5 +1,6 @@
 ---
 // Redirect to Norwegian (default language)
+import { config } from "../lib/config.ts";
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 ---
 <!doctype html>
@@ -8,7 +9,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
     <meta charset="UTF-8" />
     <meta http-equiv="refresh" content={`0;url=${base}/no/`} />
     <link rel="canonical" href={`${base}/no/`} />
-    <title>Hotspots</title>
+    <title>{config.project.name.no}</title>
   </head>
   <body>
     <p><a href={`${base}/no/`}>Går til norsk versjon…</a></p>

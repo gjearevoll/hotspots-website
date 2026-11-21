@@ -1,5 +1,6 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import { config } from "../../lib/config.ts";
 import metadata from "../../data/hotspot-metadata.json";
 import zenodoRecord from "../../data/zenodo-record.json";
 
@@ -64,7 +65,7 @@ const fmt = new Intl.NumberFormat("en-US");
 
 const strings = {
   intro:
-    "Explore biodiversity maps from the Hotspot project. Select a layer to display it on the map. Maps are available as Cloud Optimized GeoTIFF and can be downloaded individually or used directly in GIS software.",
+    `Explore biodiversity maps from the ${config.project.name.en} projects. Select a layer to display it on the map. Maps are available as Cloud Optimized GeoTIFF and can be downloaded individually or used directly in GIS software.`,
   dataLinkPrefix: "A full description of the data production can be found at",
   dataLinkText: "the following link",
   panelHeading: "Layers",

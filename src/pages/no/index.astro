@@ -20,7 +20,7 @@ const recentPubs = await fetchPublications(cristin_project_id, { size: 3 });
   <section class="hero hero--carousel">
     <HeroCarousel />
     <div class="hero-inner">
-      <p class="hero-eyebrow">NTNU Gjærevollsenteret · Hotspot-prosjektene</p>
+      <p class="hero-eyebrow">NTNU Gjærevollsenteret · {config.project.name.no}-prosjekta</p>
       <h1>Heildekkande kart over<br/>biologisk mangfald i Noreg</h1>
       <p class="hero-tagline">
         Vi utviklar kunnskapsgrunnlag for arealbasert forvaltning av natur ved hjelp av
@@ -32,7 +32,7 @@ const recentPubs = await fetchPublications(cristin_project_id, { size: 3 });
   <div class="section">
     <div class="two-col">
       <div class="prose">
-        <h2>Om Hotspot-prosjektene</h2>
+        <h2>Om {config.project.name.no}-prosjekta</h2>
         {projectDescription
           ? projectDescription.split("\n\n").map((para: string) => <p>{para}</p>)
           : <p>Beskriving vert henta frå NVA ved neste bygg.</p>

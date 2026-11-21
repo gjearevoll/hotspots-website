@@ -1,6 +1,6 @@
-# Hotspots — project website
+# NaturAtlas (Nature Atlas Norway) — project website
 
-Static website for the [Hotspots project](https://nva.sikt.no/projects/2769822) at the Gjærevoll Centre, NTNU. Built with [Astro](https://astro.build) and hosted on GitHub Pages.
+Static website for the [NaturAtlas projects](https://nva.sikt.no/projects/2769822) at the Gjærevoll Centre, NTNU. Built with [Astro](https://astro.build) and hosted on GitHub Pages.
 
 **Live site:** https://naturatlas.no/
 
@@ -203,7 +203,7 @@ npm install
 npm run dev
 ```
 
-Then open http://localhost:4321/hotspot_website/no/ in your browser.
+Then open http://localhost:4321/no/ in your browser.
 
 The dev server watches for file changes and hot-reloads automatically. Press `Ctrl+C` to stop.
 

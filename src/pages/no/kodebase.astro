@@ -1,6 +1,7 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import RepoCard from "../../components/RepoCard.astro";
+import { config } from "../../lib/config.ts";
 import { readFileSync } from "fs";
 import { join } from "path";
 import yaml from "js-yaml";
@@ -20,7 +21,7 @@ const repos = yaml.load(
   <div class="page-header">
     <div class="page-header-inner">
       <h1>Kodebase</h1>
-      <p>Open kjeldekode frå Hotspot-prosjektene, tilgjengeleg på GitHub.</p>
+      <p>Open kjeldekode frå {config.project.name.no}-prosjekta, tilgjengeleg på GitHub.</p>
     </div>
   </div>
 
