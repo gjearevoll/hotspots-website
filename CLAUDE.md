@@ -75,5 +75,5 @@ Ikonnamn er Tabler Icons-klassar (`ti-trees`, `ti-shield-check`, osb.).
 
 ## Git
 - Remote: https://github.com/gjearevoll/hotspots-website.git
-- Live site: https://gjearevoll.github.io/hotspots-website/
+- Live site: https://naturatlas.no/
 - Ingen Co-Authored-By-trailer i commits
