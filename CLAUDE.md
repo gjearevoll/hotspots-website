@@ -42,6 +42,7 @@ Felt i project.yaml:
 - `project.github_org`, `project.contact_email`, `project.institution_url`
 - `project.colors.primary`, `project.colors.dark`
 - `nva.cristin_project_id` — Cristin-prosjekt-ID for NVA API-kall
+- `funding` — finansieringskjelder (namn no/en + ref), overstyrer NVA-funding
 
 ## NVA API — funksjonar i src/lib/nva.ts
 Alle NVA- og Cristin-kall skjer via desse typede funksjonane:
