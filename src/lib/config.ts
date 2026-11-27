@@ -25,6 +25,7 @@ export interface ProjectConfig {
   nva: {
     cristin_project_id: string;
   };
+  funding?: { name: { no: string; en: string }; ref?: string }[];
   focus_box?: {
     heading: { no: string; en: string };
     uses: FocusBoxUse[];

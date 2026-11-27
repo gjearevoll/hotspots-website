@@ -18,6 +18,16 @@ project:
 nva:
   cristin_project_id: "2769822"
 
+funding:
+  - name:
+      no: "Noregs forskingsråd"
+      en: "Research Council of Norway"
+    ref: "353075 | 350347 | 326979"
+  - name:
+      no: "NTNU Gjærevollsenteret"
+      en: "NTNU Gjærevoll Centre"
+    ref: ""
+
 focus_box:
   heading:
     no: "Slik kan du bruke karta"
