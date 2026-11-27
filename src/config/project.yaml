@@ -20,6 +20,10 @@ nva:
 
 funding:
   - name:
+      no: "Miljødirektoratet"
+      en: "Norwegian Environment Agency"
+    ref: "M-2986|2025, M-2987|2025, M-3126|2026"
+  - name:
       no: "Noregs forskingsråd"
       en: "Research Council of Norway"
     ref: "353075 | 350347 | 326979"
